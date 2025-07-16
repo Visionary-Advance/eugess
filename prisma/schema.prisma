@@ -1,0 +1,350 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model attribute_types {
+  id            String                    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  name          String                    @db.VarChar(100)
+  slug          String                    @unique(map: "slug") @db.VarChar(100)
+  data_type     attribute_types_data_type
+  is_filterable Boolean?                  @default(false)
+  is_searchable Boolean?                  @default(false)
+  category_id   String?                   @db.Char(36)
+  created_at    DateTime?                 @default(now()) @db.Timestamp(0)
+
+  @@index([category_id], map: "category_id")
+}
+
+model business_analytics {
+  id               String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id      String    @db.Char(36)
+  date             DateTime  @db.Date
+  page_views       Int?      @default(0)
+  unique_visitors  Int?      @default(0)
+  phone_clicks     Int?      @default(0)
+  website_clicks   Int?      @default(0)
+  direction_clicks Int?      @default(0)
+  created_at       DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([business_id, date], map: "unique_business_date")
+  @@index([date(sort: Desc)], map: "idx_business_analytics_date")
+}
+
+model business_attributes {
+  id                String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id       String    @db.Char(36)
+  attribute_type_id String    @db.Char(36)
+  value_text        String?   @db.Text
+  value_boolean     Boolean?
+  value_integer     Int?
+  value_decimal     Decimal?  @db.Decimal(10, 2)
+  value_json        Json?
+  created_at        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([business_id, attribute_type_id], map: "unique_business_attribute")
+  @@index([attribute_type_id], map: "attribute_type_id")
+}
+
+model business_categories {
+  id          String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id String    @db.Char(36)
+  category_id String    @db.Char(36)
+  is_primary  Boolean?  @default(false)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([business_id, category_id], map: "unique_business_category")
+  @@index([category_id], map: "idx_businesses_category")
+  @@index([category_id, is_primary], map: "idx_businesses_primary_category")
+}
+
+model business_claims {
+  id                  String                  @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id         String                  @db.Char(36)
+  user_id             String                  @db.Char(36)
+  status              business_claims_status? @default(pending)
+  verification_method String?                 @db.VarChar(50)
+  verification_data   Json?
+  claimed_at          DateTime?               @default(now()) @db.Timestamp(0)
+  approved_at         DateTime?               @db.Timestamp(0)
+  approved_by         String?                 @db.Char(36)
+
+  @@index([approved_by], map: "approved_by")
+  @@index([business_id], map: "business_id")
+  @@index([user_id], map: "user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model business_hours {
+  id          String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id String    @db.Char(36)
+  day_of_week Int
+  open_time   DateTime? @db.Time(0)
+  close_time  DateTime? @db.Time(0)
+  is_closed   Boolean?  @default(false)
+  is_24_hours Boolean?  @default(false)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([business_id, day_of_week], map: "unique_business_day")
+}
+
+model business_images {
+  id          String                      @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id String                      @db.Char(36)
+  url         String                      @db.VarChar(500)
+  alt_text    String?                     @db.VarChar(255)
+  caption     String?                     @db.Text
+  image_type  business_images_image_type?
+  sort_order  Int?                        @default(0)
+  is_primary  Boolean?                    @default(false)
+  created_at  DateTime?                   @default(now()) @db.Timestamp(0)
+
+  @@index([business_id], map: "business_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model businesses {
+  id                       String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  name                     String    @db.VarChar(255)
+  slug                     String    @unique(map: "slug") @db.VarChar(255)
+  description              String?   @db.Text
+  short_description        String?   @db.VarChar(500)
+  phone                    String?   @db.VarChar(20)
+  email                    String?   @db.VarChar(255)
+  website                  String?   @db.VarChar(255)
+  street_address           String?   @db.VarChar(255)
+  city                     String?   @default("Eugene") @db.VarChar(100)
+  state                    String?   @default("Oregon") @db.VarChar(50)
+  zip_code                 String?   @db.VarChar(10)
+  latitude                 Decimal?  @db.Decimal(10, 8)
+  longitude                Decimal?  @db.Decimal(11, 8)
+  price_level              Int?
+  is_active                Boolean?  @default(true)
+  is_featured              Boolean?  @default(false)
+  is_verified              Boolean?  @default(false)
+  meta_title               String?   @db.VarChar(255)
+  meta_description         String?   @db.VarChar(500)
+  created_at               DateTime? @default(now()) @db.Timestamp(0)
+  updated_at               DateTime? @default(now()) @db.Timestamp(0)
+  has_takeout              Boolean?  @default(false)
+  has_delivery             Boolean?  @default(false)
+  has_outdoor_seating      Boolean?  @default(false)
+  is_wheelchair_accessible Boolean?  @default(false)
+  has_wifi                 Boolean?  @default(false)
+  is_pet_friendly          Boolean?  @default(false)
+  has_parking              Boolean?  @default(false)
+
+  @@index([is_active], map: "idx_businesses_active")
+  @@index([is_featured], map: "idx_businesses_featured")
+  @@index([latitude, longitude], map: "idx_businesses_location")
+  @@fulltext([name, description, short_description], map: "name")
+}
+
+model categories {
+  id          String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  name        String    @db.VarChar(100)
+  slug        String    @unique(map: "slug") @db.VarChar(100)
+  description String?   @db.Text
+  icon        String?   @db.VarChar(50)
+  color       String?   @db.VarChar(7)
+  parent_id   String?   @db.Char(36)
+  sort_order  Int?      @default(0)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([parent_id], map: "parent_id")
+}
+
+model events {
+  id                 String             @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id        String             @db.Char(36)
+  title              String             @db.VarChar(255)
+  description        String?            @db.Text
+  event_type         events_event_type?
+  start_date         DateTime           @db.Date
+  end_date           DateTime?          @db.Date
+  start_time         DateTime?          @db.Time(0)
+  end_time           DateTime?          @db.Time(0)
+  is_recurring       Boolean?           @default(false)
+  recurrence_pattern Json?
+  is_active          Boolean?           @default(true)
+  is_featured        Boolean?           @default(false)
+  created_at         DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?          @default(now()) @db.Timestamp(0)
+
+  @@index([business_id], map: "business_id")
+}
+
+model menu_items {
+  id           String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id  String    @db.Char(36)
+  name         String    @db.VarChar(255)
+  description  String?   @db.Text
+  price        Decimal?  @db.Decimal(8, 2)
+  category     String?   @db.VarChar(100)
+  dietary_info Json?
+  is_available Boolean?  @default(true)
+  sort_order   Int?      @default(0)
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+  updated_at   DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([business_id], map: "business_id")
+}
+
+model neighborhoods {
+  id          String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  name        String    @db.VarChar(100)
+  slug        String    @unique(map: "slug") @db.VarChar(100)
+  description String?   @db.Text
+  center_lat  Decimal?  @db.Decimal(10, 8)
+  center_lng  Decimal?  @db.Decimal(11, 8)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model review_votes {
+  id         String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  review_id  String    @db.Char(36)
+  user_id    String    @db.Char(36)
+  is_helpful Boolean
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([review_id, user_id], map: "unique_review_vote")
+  @@index([user_id], map: "user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reviews {
+  id                String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id       String    @db.Char(36)
+  user_id           String?   @db.Char(36)
+  rating            Int
+  title             String?   @db.VarChar(255)
+  content           String    @db.Text
+  visit_date        DateTime? @db.Date
+  is_verified_visit Boolean?  @default(false)
+  is_featured       Boolean?  @default(false)
+  is_approved       Boolean?  @default(true)
+  helpful_count     Int?      @default(0)
+  total_votes       Int?      @default(0)
+  created_at        DateTime? @default(now()) @db.Timestamp(0)
+  updated_at        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([is_approved], map: "idx_reviews_approved")
+  @@index([business_id, rating], map: "idx_reviews_business_rating")
+  @@index([created_at(sort: Desc)], map: "idx_reviews_created_at")
+  @@index([user_id], map: "user_id")
+}
+
+model search_analytics {
+  id                 String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  query              String    @db.Text
+  results_count      Int?      @default(0)
+  click_through_rate Decimal?  @db.Decimal(5, 4)
+  search_date        DateTime? @default(dbgenerated("(curdate())")) @db.Date
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([search_date(sort: Desc)], map: "idx_search_analytics_date")
+}
+
+model special_hours {
+  id          String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  business_id String    @db.Char(36)
+  date        DateTime  @db.Date
+  open_time   DateTime? @db.Time(0)
+  close_time  DateTime? @db.Time(0)
+  is_closed   Boolean?  @default(false)
+  reason      String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([business_id], map: "business_id")
+}
+
+model users {
+  id          String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  email       String    @unique(map: "email") @db.VarChar(255)
+  username    String?   @unique(map: "username") @db.VarChar(100)
+  first_name  String?   @db.VarChar(100)
+  last_name   String?   @db.VarChar(100)
+  avatar_url  String?   @db.VarChar(500)
+  is_verified Boolean?  @default(false)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+  updated_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model blog_categories {
+  id          String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  name        String    @db.VarChar(100)
+  slug        String    @unique(map: "slug") @db.VarChar(100)
+  description String?   @db.Text
+  color       String?   @default("#355E3B") @db.VarChar(7)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model blogs {
+  id                String    @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  title             String    @db.VarChar(255)
+  slug              String    @unique(map: "slug") @db.VarChar(255)
+  content           String?   @db.Text
+  excerpt           String?   @db.VarChar(500)
+  featured_image    String?   @db.VarChar(500)
+  author_name       String?   @db.VarChar(100)
+  author_id         String?   @db.Char(36)
+  category          String?   @db.VarChar(100)
+  tags              Json?
+  read_time_minutes Int?      @default(5)
+  view_count        Int?      @default(0)
+  is_published      Boolean?  @default(false)
+  is_featured       Boolean?  @default(false)
+  publish_date      DateTime? @db.Timestamp(0)
+  meta_title        String?   @db.VarChar(255)
+  meta_description  String?   @db.VarChar(500)
+  created_at        DateTime? @default(now()) @db.Timestamp(0)
+  updated_at        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([author_id], map: "idx_blogs_author")
+  @@index([category], map: "idx_blogs_category")
+  @@index([is_featured], map: "idx_blogs_featured")
+  @@index([publish_date(sort: Desc)], map: "idx_blogs_publish_date")
+  @@index([is_published], map: "idx_blogs_published")
+  @@fulltext([title, content, excerpt], map: "title")
+}
+
+enum attribute_types_data_type {
+  text
+  boolean
+  integer
+  decimal
+  json
+}
+
+enum business_claims_status {
+  pending
+  approved
+  rejected
+}
+
+enum events_event_type {
+  promotion
+  special_menu
+  live_music
+  happy_hour
+  other
+}
+
+enum business_images_image_type {
+  logo
+  hero
+  menu
+  interior
+  exterior
+  food
+  other
+}
