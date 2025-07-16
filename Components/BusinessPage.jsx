@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { 
   MapPin, 
   Phone, 
@@ -17,6 +18,10 @@ import {
 } from "lucide-react";
 
 export default function BusinessPage() {
+  const params = useParams();
+  const router = useRouter();
+  const businessSlug = params.slug; // Get slug from URL parameters
+
   const [business, setBusiness] = useState(null);
   const [businessImages, setBusinessImages] = useState([]);
   const [businessHours, setBusinessHours] = useState([]);
@@ -25,40 +30,76 @@ export default function BusinessPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
 
-  // Get business ID from URL (you'd get this from router params in Next.js)
-  const businessId = "sample-business-id"; // This would come from useParams() or router
-
   useEffect(() => {
-    fetchBusinessData();
-  }, [businessId]);
+    if (businessSlug) {
+      fetchBusinessData();
+    }
+  }, [businessSlug]);
 
   const fetchBusinessData = async () => {
     try {
-      // Fetch business details
-      const businessResponse = await fetch(`/api/businesses/${businessId}`);
+      console.log('Fetching business with slug:', businessSlug); // Debug log
+      
+      // Fetch business details by slug
+      const businessResponse = await fetch(`/api/businesses/slug/${businessSlug}`);
+      console.log('Business response status:', businessResponse.status); // Debug log
+      
+      if (!businessResponse.ok) {
+        const errorData = await businessResponse.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Business fetch error:', errorData);
+        throw new Error(`Business not found: ${businessResponse.status}`);
+      }
+      
       const businessData = await businessResponse.json();
+      console.log('Business data received:', businessData); // Debug log
       setBusiness(businessData);
 
-      // Fetch business images
-      const imagesResponse = await fetch(`/api/businesses/${businessId}/images`);
-      const imagesData = await imagesResponse.json();
-      setBusinessImages(Array.isArray(imagesData) ? imagesData : []);
+      // Fetch business images (optional - don't fail if this doesn't work)
+      try {
+        const imagesResponse = await fetch(`/api/businesses/${businessData.id}/images`);
+        if (imagesResponse.ok) {
+          const imagesData = await imagesResponse.json();
+          setBusinessImages(Array.isArray(imagesData) ? imagesData : []);
+        }
+      } catch (error) {
+        console.log('Images fetch failed (optional):', error);
+        setBusinessImages([]);
+      }
 
-      // Fetch business hours
-      const hoursResponse = await fetch(`/api/businesses/${businessId}/hours`);
-      const hoursData = await hoursResponse.json();
-      setBusinessHours(Array.isArray(hoursData) ? hoursData : []);
+      // Fetch business hours (optional - don't fail if this doesn't work)
+      try {
+        const hoursResponse = await fetch(`/api/businesses/${businessData.id}/hours`);
+        if (hoursResponse.ok) {
+          const hoursData = await hoursResponse.json();
+          setBusinessHours(Array.isArray(hoursData) ? hoursData : []);
+        }
+      } catch (error) {
+        console.log('Hours fetch failed (optional):', error);
+        setBusinessHours([]);
+      }
 
-      // Fetch reviews
-      const reviewsResponse = await fetch(`/api/businesses/${businessId}/reviews`);
-      const reviewsData = await reviewsResponse.json();
-      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+      // Fetch reviews (optional - don't fail if this doesn't work)
+      try {
+        const reviewsResponse = await fetch(`/api/businesses/${businessData.id}/reviews`);
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json();
+          setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+        }
+      } catch (error) {
+        console.log('Reviews fetch failed (optional):', error);
+        setReviews([]);
+      }
 
     } catch (error) {
       console.error('Error fetching business data:', error);
+      setBusiness(null); // Set to null to show "not found" message
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBackClick = () => {
+    router.back(); // Go back to previous page
   };
 
   const nextImage = () => {
@@ -117,7 +158,14 @@ export default function BusinessPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-600 mb-4">Business Not Found</h1>
-          <p className="text-gray-500">The business you're looking for doesn't exist.</p>
+          <p className="text-gray-500 mb-2">The business with slug "{businessSlug}" doesn't exist.</p>
+          <p className="text-gray-400 text-sm mb-4">Check the console for more details.</p>
+          <button 
+            onClick={() => router.push('/')}
+            className="mt-4 bg-[#355E3B] text-white px-6 py-2 rounded-lg hover:bg-[#2a4a2f] transition-colors"
+          >
+            Go Home
+          </button>
         </div>
       </div>
     );
@@ -173,7 +221,10 @@ export default function BusinessPage() {
         )}
 
         {/* Back Button */}
-        <button className="absolute top-4 left-4 bg-white/90 text-gray-900 p-2 rounded-full hover:bg-white transition-colors">
+        <button 
+          onClick={handleBackClick}
+          className="absolute top-4 left-4 bg-white/90 text-gray-900 p-2 rounded-full hover:bg-white transition-colors"
+        >
           <ArrowLeft className="w-6 h-6" />
         </button>
 

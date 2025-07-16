@@ -23,8 +23,9 @@ export async function GET(request, { params }) {
         city: true,
         state: true,
         zip_code: true,
+        neighborhood_id: true,
         price_level: true,
-        cuisine_type: true,
+        cuisine_type: true, // Add this field
         is_active: true,
         is_featured: true,
         is_verified: true,
@@ -44,9 +45,16 @@ export async function GET(request, { params }) {
       return Response.json({ error: 'Business not found' }, { status: 404 });
     }
 
+    // Get business categories
+    const businessCategories = await prisma.business_categories.findMany({
+      where: { business_id: id },
+      select: { category_id: true }
+    });
+
     return Response.json({
       ...business,
-      id: business.id.toString()
+      id: business.id.toString(),
+      categories: businessCategories.map(bc => bc.category_id)
     });
   } catch (error) {
     console.error('Error fetching business:', error);

@@ -1,6 +1,53 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Loader } from 'lucide-react';
 
+// Define cuisine options array
+const cuisineOptions = [
+  { value: '', label: 'Select Cuisine Type...' },
+  // Asian Cuisines
+  { value: 'japanese', label: 'Japanese' },
+  { value: 'chinese', label: 'Chinese' },
+  { value: 'thai', label: 'Thai' },
+  { value: 'vietnamese', label: 'Vietnamese' },
+  { value: 'korean', label: 'Korean' },
+  { value: 'indian', label: 'Indian' },
+  { value: 'asian_fusion', label: 'Asian Fusion' },
+  
+  // Mexican
+  { value: 'mexican', label: 'Mexican' },
+  
+  // European
+  { value: 'italian', label: 'Italian' },
+  { value: 'french', label: 'French' },
+  { value: 'german', label: 'German' },
+  { value: 'mediterranean', label: 'Mediterranean' },
+  { value: 'greek', label: 'Greek' },
+  { value: 'spanish', label: 'Spanish' },
+  
+  // American
+  { value: 'american_classic', label: 'American Classic' },
+  { value: 'southern_bbq', label: 'Southern/BBQ' },
+  { value: 'burgers', label: 'Burgers & Fries' },
+  { value: 'sandwiches', label: 'Sandwiches & Delis' },
+  { value: 'steakhouse', label: 'Steakhouse' },
+  
+  // Dietary/Style
+  { value: 'vegetarian_vegan', label: 'Vegetarian/Vegan' },
+  { value: 'healthy_fresh', label: 'Healthy/Fresh' },
+  { value: 'farm_to_table', label: 'Farm-to-Table' },
+  { value: 'seafood', label: 'Seafood' },
+  { value: 'pizza', label: 'Pizza' },
+  { value: 'breakfast_brunch', label: 'Breakfast/Brunch' },
+  { value: 'desserts', label: 'Desserts/Sweets' },
+  
+  // Beverages
+  { value: 'coffee_espresso', label: 'Coffee/Espresso' },
+  { value: 'bubble_tea', label: 'Bubble Tea' },
+  { value: 'breweries_beer', label: 'Breweries/Beer' },
+  { value: 'wine_bars', label: 'Wine Bars' },
+  { value: 'cocktails_bars', label: 'Cocktails/Bars' }
+];
+
 export default function BusinessFormModal({ 
   isOpen, 
   onClose, 
@@ -19,6 +66,7 @@ export default function BusinessFormModal({
     city: 'Eugene',
     state: 'Oregon',
     zip_code: '',
+    neighborhood_id: '',
     price_level: 1,
     is_active: true,
     is_featured: false,
@@ -36,36 +84,77 @@ export default function BusinessFormModal({
   
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [neighborhoods, setNeighborhoods] = useState([]);
+
+  // Fetch neighborhoods when component mounts
+  useEffect(() => {
+    async function fetchNeighborhoods() {
+      try {
+        const response = await fetch('/api/admin/neighborhoods');
+        const data = await response.json();
+        setNeighborhoods(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Error fetching neighborhoods:', error);
+        setNeighborhoods([]);
+      }
+    }
+
+    if (isOpen) {
+      fetchNeighborhoods();
+    }
+  }, [isOpen]);
 
   // Initialize form data when modal opens
   useEffect(() => {
     if (isOpen) {
       if (business) {
         // Edit mode - populate with existing business data
-        setFormData({
-          name: business.name || '',
-          description: business.description || '',
-          short_description: business.short_description || '',
-          phone: business.phone || '',
-          email: business.email || '',
-          website: business.website || '',
-          street_address: business.street_address || '',
-          city: business.city || 'Eugene',
-          state: business.state || 'Oregon',
-          zip_code: business.zip_code || '',
-          price_level: business.price_level || 1,
-          is_active: business.is_active !== false,
-          is_featured: business.is_featured === true,
-          is_verified: business.is_verified === true,
-          has_takeout: business.has_takeout === true,
-          has_delivery: business.has_delivery === true,
-          has_outdoor_seating: business.has_outdoor_seating === true,
-          is_wheelchair_accessible: business.is_wheelchair_accessible === true,
-          has_wifi: business.has_wifi === true,
-          is_pet_friendly: business.is_pet_friendly === true,
-          has_parking: business.has_parking === true,
-          categories: business.categories || []
-        });
+        // If business.categories doesn't exist, fetch it
+        const loadBusinessData = async () => {
+          let businessCategories = business.categories || [];
+          
+          // If categories aren't provided, fetch them from the API
+          if (!business.categories && business.id) {
+            try {
+              const response = await fetch(`/api/admin/businesses/${business.id}`);
+              if (response.ok) {
+                const businessData = await response.json();
+                businessCategories = businessData.categories || [];
+              }
+            } catch (error) {
+              console.error('Error fetching business categories:', error);
+            }
+          }
+
+          setFormData({
+            name: business.name || '',
+            description: business.description || '',
+            short_description: business.short_description || '',
+            phone: business.phone || '',
+            email: business.email || '',
+            website: business.website || '',
+            street_address: business.street_address || '',
+            city: business.city || 'Eugene',
+            state: business.state || 'Oregon',
+            zip_code: business.zip_code || '',
+            neighborhood_id: business.neighborhood_id || '',
+            price_level: business.price_level || 1,
+            is_active: business.is_active !== false,
+            is_featured: business.is_featured === true,
+            is_verified: business.is_verified === true,
+            has_takeout: business.has_takeout === true,
+            has_delivery: business.has_delivery === true,
+            has_outdoor_seating: business.has_outdoor_seating === true,
+            is_wheelchair_accessible: business.is_wheelchair_accessible === true,
+            has_wifi: business.has_wifi === true,
+            is_pet_friendly: business.is_pet_friendly === true,
+            has_parking: business.has_parking === true,
+            cuisine_type: business.cuisine_type || '',
+            categories: businessCategories
+          });
+        };
+
+        loadBusinessData();
       } else {
         // Add mode - reset to defaults
         setFormData({
@@ -79,6 +168,7 @@ export default function BusinessFormModal({
           city: 'Eugene',
           state: 'Oregon',
           zip_code: '',
+          neighborhood_id: '',
           price_level: 1,
           is_active: true,
           is_featured: false,
@@ -197,7 +287,7 @@ export default function BusinessFormModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg text-black shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-2xl font-serif font-semibold text-gray-900">
@@ -216,7 +306,7 @@ export default function BusinessFormModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+              <h3 className="text-lg  font-semibold text-gray-900">Basic Information</h3>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -227,7 +317,7 @@ export default function BusinessFormModal({
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                     errors.name ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter business name"
@@ -244,7 +334,7 @@ export default function BusinessFormModal({
                   value={formData.short_description}
                   onChange={handleInputChange}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                   placeholder="Brief description (150 characters)"
                   maxLength={150}
                 />
@@ -259,7 +349,7 @@ export default function BusinessFormModal({
                   value={formData.description}
                   onChange={handleInputChange}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                   placeholder="Detailed description of the business"
                 />
               </div>
@@ -272,7 +362,7 @@ export default function BusinessFormModal({
                   name="price_level"
                   value={formData.price_level}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                 >
                   <option value={1}>$ - Budget Friendly</option>
                   <option value={2}>$$ - Mid Range</option>
@@ -284,7 +374,7 @@ export default function BusinessFormModal({
 
             {/* Contact Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+              <h3 className="text-lg  font-semibold text-gray-900">Contact Information</h3>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -295,7 +385,7 @@ export default function BusinessFormModal({
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                     errors.phone ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="(555) 123-4567"
@@ -312,7 +402,7 @@ export default function BusinessFormModal({
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                     errors.email ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="business@example.com"
@@ -329,7 +419,7 @@ export default function BusinessFormModal({
                   name="website"
                   value={formData.website}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                     errors.website ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="https://www.example.com"
@@ -346,7 +436,7 @@ export default function BusinessFormModal({
                   name="street_address"
                   value={formData.street_address}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                     errors.street_address ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="123 Main Street"
@@ -364,7 +454,7 @@ export default function BusinessFormModal({
                     name="city"
                     value={formData.city}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -376,7 +466,7 @@ export default function BusinessFormModal({
                     name="state"
                     value={formData.state}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -388,13 +478,33 @@ export default function BusinessFormModal({
                     name="zip_code"
                     value={formData.zip_code}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                       errors.zip_code ? 'border-red-300' : 'border-gray-300'
                     }`}
                   />
                   {errors.zip_code && <p className="text-red-600 text-sm mt-1">{errors.zip_code}</p>}
                 </div>
               </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Neighborhood
+                </label>
+                <select
+                  name="neighborhood_id"
+                  value={formData.neighborhood_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                >
+                  <option value="">Select Neighborhood...</option>
+                  {neighborhoods.map((neighborhood) => (
+                    <option key={neighborhood.id} value={neighborhood.id}>
+                      {neighborhood.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Cuisine Type
@@ -403,7 +513,7 @@ export default function BusinessFormModal({
                   name="cuisine_type"
                   value={formData.cuisine_type}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                 >
                   {cuisineOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -416,7 +526,7 @@ export default function BusinessFormModal({
 
             {/* Features & Amenities */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Features & Amenities</h3>
+              <h3 className="text-lg  font-semibold text-gray-900">Features & Amenities</h3>
               
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -444,13 +554,13 @@ export default function BusinessFormModal({
 
             {/* Categories & Status */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Categories & Status</h3>
+              <h3 className="text-lg  font-semibold text-gray-900">Categories & Status</h3>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Categories
                 </label>
-                <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg text-black p-3">
                   {categories.map((category) => (
                     <label key={category.id} className="flex items-center">
                       <input
@@ -504,7 +614,7 @@ export default function BusinessFormModal({
 
           {/* Submit Error */}
           {errors.submit && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg ">
               {errors.submit}
             </div>
           )}
@@ -514,14 +624,14 @@ export default function BusinessFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg  hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              className={`px-6 py-2 rounded-lg text-black transition-colors flex items-center gap-2 ${
                 loading
                   ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                   : 'bg-[#355E3B] text-white hover:bg-[#2a4a2f]'

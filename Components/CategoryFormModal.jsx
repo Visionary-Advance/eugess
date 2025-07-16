@@ -129,7 +129,7 @@ export default function CategoryFormModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg text-black shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-2xl font-serif font-semibold text-gray-900">
@@ -157,7 +157,7 @@ export default function CategoryFormModal({
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                     errors.name ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter category name (e.g., Restaurants, Coffee Shops)"
@@ -177,7 +177,7 @@ export default function CategoryFormModal({
                   value={formData.description}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                   placeholder="Brief description of this category"
                 />
               </div>
@@ -191,7 +191,7 @@ export default function CategoryFormModal({
                     name="icon"
                     value={formData.icon}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                   >
                     <option value="">Select an icon...</option>
                     {iconOptions.map((option) => (
@@ -222,7 +222,7 @@ export default function CategoryFormModal({
                       name="color"
                       value={formData.color}
                       onChange={handleInputChange}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                       placeholder="#355E3B"
                     />
                   </div>
@@ -239,7 +239,7 @@ export default function CategoryFormModal({
                   value={formData.sort_order}
                   onChange={handleInputChange}
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
                   placeholder="0"
                 />
                 <p className="text-gray-500 text-sm mt-1">
@@ -266,11 +266,11 @@ export default function CategoryFormModal({
             {/* Preview */}
             {(formData.name || formData.icon) && (
               <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Preview</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg  font-semibold text-gray-900 mb-4">Preview</h3>
+                <div className="bg-gray-50 p-4 rounded-lg text-black">
                   <div className="flex items-center gap-4">
                     <div 
-                      className="w-16 h-16 rounded-lg flex items-center justify-center"
+                      className="w-16 h-16 rounded-lg text-black flex items-center justify-center"
                       style={{ backgroundColor: formData.color || '#355E3B' }}
                     >
                       {formData.icon ? (
@@ -304,7 +304,7 @@ export default function CategoryFormModal({
 
           {/* Submit Error */}
           {errors.submit && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg ">
               {errors.submit}
             </div>
           )}
@@ -314,14 +314,14 @@ export default function CategoryFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg  hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+              className={`px-6 py-2 rounded-lg text-black transition-colors flex items-center gap-2 ${
                 loading
                   ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                   : 'bg-[#355E3B] text-white hover:bg-[#2a4a2f]'

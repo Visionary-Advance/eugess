@@ -19,6 +19,7 @@ export async function GET() {
         b.city,
         b.state,
         b.zip_code,
+        b.neighborhood_id,
         b.price_level,
         b.cuisine_type,
         b.is_featured,

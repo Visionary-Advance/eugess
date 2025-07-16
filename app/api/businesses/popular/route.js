@@ -1,3 +1,4 @@
+// app/api/businesses/popular/route.js
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -16,6 +17,7 @@ export async function GET() {
       select: {
         id: true,
         name: true,
+        slug: true, // Add slug for routing
         description: true,
         short_description: true,
         street_address: true,

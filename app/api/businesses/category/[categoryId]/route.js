@@ -21,6 +21,7 @@ export async function GET(request, { params }) {
         b.city,
         b.state,
         b.zip_code,
+        b.neighborhood_id,
         b.price_level,
         b.cuisine_type,
         b.is_featured,

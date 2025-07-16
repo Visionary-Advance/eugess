@@ -4,6 +4,7 @@ import {
   MapPin,
   Clock,
 } from "lucide-react";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 
 export default function PopularSection() {
@@ -113,9 +114,12 @@ export default function PopularSection() {
                   </div>
 
                   {/* View More Button */}
-                  <button className="bg-[#355E3B] text-white font-serif text-[20px]  px-6  py-2 rounded-[14px] hover:bg-[#2a4a2f] transition-colors">
-                    View More
-                  </button>
+                 {/* View More Button */}
+<Link href={`/business/${spot.slug}`}>
+  <button className="bg-[#355E3B] text-white font-serif text-[20px]  px-6  py-2 rounded-[14px] hover:bg-[#2a4a2f] transition-colors">
+    View More
+  </button>
+</Link>
                 </div>
               </div>
             </div>

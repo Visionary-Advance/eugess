@@ -23,7 +23,9 @@ export async function GET() {
         city: true,
         state: true,
         zip_code: true,
+        neighborhood_id: true,
         price_level: true,
+        cuisine_type: true, // Add this field
         is_active: true,
         is_featured: true,
         is_verified: true,
