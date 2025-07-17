@@ -122,9 +122,11 @@ const Index = () => {
           <h1 className="font-serif text-[40px] font-semibold text-black text-left mb-4 lg:mb-0">
             Browse All Restaurants
           </h1>
+          <Link href={"directory/all"}>
           <button className="block border border-primary active:scale-95 text-[#355E3B] hover:bg-[#355E3B] cursor-pointer font-serif text-[24px] md:text-[30px] px-6 py-2 rounded-[20px] hover:bg-primary hover:text-white transition-colors">
               Browse All
             </button>
+            </Link>
         </div>
 
 
