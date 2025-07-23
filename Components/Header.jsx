@@ -1,3 +1,4 @@
+// Updated Components/Header.jsx
 'use client'
 
 import { Menu, X } from "lucide-react";
@@ -10,6 +11,7 @@ const Header = ({ currentPage = "home" }) => {
     { href: "/", label: "Home", key: "home" },
     { href: "/about", label: "About", key: "about" },
     { href: "/directory", label: "Directory", key: "directory" },
+    { href: "/neighborhoods", label: "Neighborhoods", key: "neighborhoods" }, // Added this line
     { href: "/blogs", label: "Blogs", key: "blogs" },
     { href: "/contact", label: "Contact", key: "contact" },
   ];

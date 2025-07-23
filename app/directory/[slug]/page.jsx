@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { MapPin, Phone, Globe, Star, ChevronDown, Search, Filter, X } from "lucide-react";
+import Link from "next/link";
 
 export default function DirectoryPage() {
   const params = useParams();
@@ -532,7 +533,7 @@ export default function DirectoryPage() {
             {filteredBusinesses.map((business) => (
               <div
                 key={business.id}
-                className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow "
               >
                 {/* Business Image */}
                 <div className="h-48 bg-gray-200 overflow-hidden">
@@ -623,9 +624,11 @@ export default function DirectoryPage() {
                   )}
 
                   {/* View Details Button */}
-                  <button className="w-full bg-[#355E3B] text-white font-serif text-lg py-3 rounded-xl hover:bg-[#2a4a2f] transition-colors">
+                  <Link href={`/business/${business.slug}`} >
+                  <button className="w-full bg-[#355E3B] cursor-pointer text-white font-serif text-lg py-3 rounded-xl hover:bg-[#2a4a2f] transition-colors">
                     View Details
                   </button>
+                  </Link>
                 </div>
               </div>
             ))}

@@ -338,38 +338,45 @@ export default function BusinessFormModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    setLoading(true);
-    
-    try {
-      const method = business ? 'PUT' : 'POST';
-      const url = business 
-        ? `/api/admin/businesses/${business.id}` 
-        : '/api/admin/businesses';
-      
-      // Ensure numeric fields are numbers
-      const submitData = {
-        ...formData,
-        price_level: parseInt(formData.price_level, 10)
-      };
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      });
+// Fixed handleSubmit function for BusinessFormModal.jsx
 
-      if (response.ok) {
-        const savedBusiness = await response.json();
-        
-        // Save business hours
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!validateForm()) return;
+  
+  setLoading(true);
+  
+  try {
+    const method = business ? 'PUT' : 'POST';
+    const url = business 
+      ? `/api/admin/businesses/${business.id}` 
+      : '/api/admin/businesses';
+    
+    // Ensure numeric fields are numbers
+    const submitData = {
+      ...formData,
+      price_level: parseInt(formData.price_level, 10)
+    };
+    
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(submitData),
+    });
+
+    if (response.ok) {
+      const savedBusiness = await response.json();
+      console.log('Business saved successfully:', savedBusiness);
+      
+      // Save business hours - ensure we have a valid business ID
+      if (savedBusiness.id && businessHours.length > 0) {
         try {
+          console.log('Saving business hours for business ID:', savedBusiness.id);
+          console.log('Business hours data:', businessHours);
+          
           const hoursResponse = await fetch(`/api/admin/businesses/${savedBusiness.id}/hours`, {
             method: 'POST',
             headers: {
@@ -378,19 +385,35 @@ export default function BusinessFormModal({
             body: JSON.stringify({ hours: businessHours }),
           });
 
+          console.log('Hours response status:', hoursResponse.status);
+          console.log('Hours response headers:', Object.fromEntries(hoursResponse.headers.entries()));
+
           if (!hoursResponse.ok) {
-            const hoursErrorData = await hoursResponse.json().catch(() => ({}));
+            // Get response text first to see what the server is actually returning
+            const responseText = await hoursResponse.text();
+            console.error('Hours response error text:', responseText);
+            
+            let hoursErrorData;
+            try {
+              hoursErrorData = JSON.parse(responseText);
+            } catch (parseError) {
+              console.error('Could not parse error response as JSON:', parseError);
+              hoursErrorData = { error: 'Invalid JSON response', rawResponse: responseText };
+            }
+            
             console.error('Error saving business hours:', {
               status: hoursResponse.status,
               statusText: hoursResponse.statusText,
               error: hoursErrorData,
               businessId: savedBusiness.id,
-              hours: businessHours
+              hours: businessHours,
+              url: `/api/admin/businesses/${savedBusiness.id}/hours`
             });
-            // Don't fail the entire operation, just log the error
+            
+            // Don't fail the entire operation, just show a warning
             setErrors(prev => ({ 
               ...prev, 
-              hoursWarning: `Business saved successfully, but hours could not be saved: ${hoursErrorData.error || 'Unknown error'}` 
+              hoursWarning: `Business saved successfully, but hours could not be saved: ${hoursErrorData.error || hoursErrorData.rawResponse || 'Unknown error'}` 
             }));
           } else {
             const hoursResult = await hoursResponse.json();
@@ -403,20 +426,24 @@ export default function BusinessFormModal({
             hoursWarning: `Business saved successfully, but hours could not be saved: ${hoursError.message}` 
           }));
         }
-
-        onSave(savedBusiness);
-        onClose();
       } else {
-        const errorData = await response.json();
-        setErrors({ submit: errorData.error || 'Failed to save business' });
+        console.log('Skipping hours save - no business ID or no hours data');
       }
-    } catch (error) {
-      console.error('Error saving business:', error);
-      setErrors({ submit: 'An error occurred while saving' });
-    } finally {
-      setLoading(false);
+
+      onSave(savedBusiness);
+      onClose();
+    } else {
+      const errorData = await response.json().catch(() => ({ error: 'Invalid response' }));
+      console.error('Business save error:', errorData);
+      setErrors({ submit: errorData.error || 'Failed to save business' });
     }
-  };
+  } catch (error) {
+    console.error('Error saving business:', error);
+    setErrors({ submit: 'An error occurred while saving' });
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (!isOpen) return null;
 

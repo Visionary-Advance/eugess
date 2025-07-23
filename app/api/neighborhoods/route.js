@@ -1,3 +1,5 @@
+// Update your app/api/neighborhoods/route.js file with this content:
+
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -14,6 +16,7 @@ export async function GET() {
       select: {
         id: true,
         name: true,
+        slug: true,        // Add this line - this was missing!
         description: true,
         // Note: Your neighborhoods table doesn't have an image field
         // You might need to add one or use a default image
@@ -27,6 +30,8 @@ export async function GET() {
       // Add a placeholder image since your schema doesn't have an image field
       image: `https://via.placeholder.com/325x375/355E3B/white?text=${encodeURIComponent(neighborhood.name)}`
     }));
+
+    console.log('Neighborhoods API returning:', serializedNeighborhoods); // Debug log
 
     return Response.json(serializedNeighborhoods);
   } catch (error) {
