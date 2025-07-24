@@ -18,6 +18,8 @@ import {
 import Link from "next/link";
 import NeighborhoodSection from "@/Components/NeighborhoodSection";
 import Blogs from "@/Components/Blogs";
+import RandomRestaurantsSection from "@/Components/RandomRestaurantSection";
+import BlogHomeSection from "@/Components/BlogHomeSection";
 
 
 
@@ -114,113 +116,7 @@ const Index = () => {
       {/* Browse By Neighborhood Section */}
     <NeighborhoodSection />
 
-      {/* Browse All Restaurants Section */}
-      <section className="py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          {/* Section Header */}
-         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 lg:mb-16">
-          <h1 className="font-serif text-[40px] font-semibold text-black text-left mb-4 lg:mb-0">
-            Browse All Restaurants
-          </h1>
-          <Link href={"directory/all"}>
-          <button className="block border border-primary active:scale-95 text-[#355E3B] hover:bg-[#355E3B] cursor-pointer font-serif text-[24px] md:text-[30px] px-6 py-2 rounded-[20px] hover:bg-primary hover:text-white transition-colors">
-              Browse All
-            </button>
-            </Link>
-        </div>
-
-
-          {/* Restaurant Cards */}
-          <div className="space-y-6">
-            {restaurants.map((restaurant) => (
-              <div
-                key={restaurant.id}
-                className="bg-[#F5F5F5] border border-black rounded-[30px] overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-              >
-                <div className="flex">
-                  {/* Restaurant Image */}
-                  <div className="w-26  lg:w-[200px] lg:h-[200px] bg-white border-r border-black rounded-l-[25px] flex-shrink-0">
-                    <div className="w-full h-full bg-gray-200 rounded-l-[25px]"></div>
-                  </div>
-
-                  {/* Restaurant Info */}
-                  <div className="flex-1 px-3 pt-3 relative">
-                    {/* Restaurant Name & Status */}
-                    <div className="flex items-start mb-2">
-                      <h3 className="font-serif text-[20px] lg:text-[30px] font-semibold text-black">
-                        {restaurant.name}
-                      </h3>
-                       <span className="mx-2 text-black text-[20px] lg:text-[30px]">•</span>
-                      <div
-                        className={`px-3 py-1 mt-1 rounded-[20px] text-[13px] lg:text-[18px] font-serif ${
-                          restaurant.isOpen
-                            ? "bg-[#276B00] text-[#0CAE00]"
-                            : "bg-[#770C0C] text-[#EA0000]"
-                        }`}
-                      >
-                        {restaurant.isOpen ? "Open" : "Closed"}
-                      </div>
-                    </div>
-
-                    {/* Cuisine, Rating, Price */}
-                    <div className="flex items-center gap-2 lg:mb-6">
-                      <span className="font-serif text-[14px] lg:text-[18px] font-semibold text-[#868686]">
-                        {restaurant.cuisine}
-                      </span>
-                      <span className="text-[#868686] text-[15px] lg:text-[20px]">•</span>
-                      <div className="flex items-center gap-1">
-                        <Star
-                          className="w-[18px] h-[18px] text-[#FFDB3A] fill-[#FFDB3A]"
-                          strokeWidth={2}
-                        />
-                        <span className="font-serif text-[14px] lg:text-[18px] font-semibold text-[#868686]">
-                          {restaurant.rating}
-                        </span>
-                      </div>
-                      <span className="text-[#868686] text-[15px]">•</span>
-                      <span className="font-serif text-[14px] lg:text-[18px] text-[#868686]">
-                        {restaurant.priceLevel}
-                      </span>
-                    </div>
-
-                    {/* Contact Info */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <Phone
-                          className="w-[22px] h-[22px] lg:w-[25px] lg:h-[25px] text-[#868686]"
-                          strokeWidth={2}
-                        />
-                        <Link href={`tel: ${restaurant.phone}`} >
-                        <span className="font-sans underline text-[14px] lg:text-[22px] text-[#868686]">
-                          {restaurant.phone}
-                        </span>
-                        </Link>
-                      </div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <MapPin
-                          className="w-[22px] h-[22px] lg:w-[25px] lg:h-[25px] text-[#868686]"
-                          strokeWidth={2}
-                        />
-                        <span className="font-sans text-[14px] lg:text-[22px] text-[#868686]">
-                          {restaurant.address}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Arrow */}
-                    <div className="absolute right-3 lg:right-6 top-1/2 transform -translate-y-1/2">
-                      <ChevronRight
-                        className="w-[45px] h-[45px] lg:w-[90px] lg:h-[90px] text-black"
-                        strokeWidth={2}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    <RandomRestaurantsSection />
 
       {/* Community Signup Section */}
       <section className="py-16 px-4">
@@ -276,7 +172,10 @@ const Index = () => {
 
       <Blogs />
     </div>
+
+    <BlogHomeSection />
     </div>
+
   );
 };
 
