@@ -1,6 +1,7 @@
-// Components/BlogFormModal.jsx
+// Updated Components/BlogFormModal.jsx - Fixed Tags Issue
 import { useState, useEffect } from 'react';
 import { X, Save, Loader, Upload, Image as ImageIcon } from 'lucide-react';
+import RichTextEditor from './RichTextEditor';
 
 export default function BlogFormModal({ 
   isOpen, 
@@ -13,7 +14,6 @@ export default function BlogFormModal({
     content: '',
     excerpt: '',
     featured_image: '',
-    author_name: '',
     category: '',
     tags: [],
     read_time_minutes: 5,
@@ -27,60 +27,121 @@ export default function BlogFormModal({
   const [errors, setErrors] = useState({});
   const [imageUploading, setImageUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState('');
-
-  // Category options
-  const categoryOptions = [
-    { value: '', label: 'Select Category...' },
-    { value: 'Community Vote', label: 'Community Vote' },
-    { value: 'Restaurant Review', label: 'Restaurant Review' },
-    { value: 'Food Guide', label: 'Food Guide' },
-    { value: 'Local Events', label: 'Local Events' },
-    { value: 'Tips & Guides', label: 'Tips & Guides' },
-    { value: 'Behind the Scenes', label: 'Behind the Scenes' },
-    { value: 'Chef Interviews', label: 'Chef Interviews' },
-    { value: 'Seasonal', label: 'Seasonal' },
-    { value: 'News', label: 'News' }
-  ];
+  const [contentLoading, setContentLoading] = useState(false);
+  const [tagsInput, setTagsInput] = useState(''); // Separate state for tags input
+  const [categoryOptions, setCategoryOptions] = useState([
+    { value: '', label: 'Select Category...' }
+  ]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   // Initialize form data when modal opens
   useEffect(() => {
     if (isOpen) {
+      // Fetch categories when modal opens
+      fetchCategories();
+      
       if (blog) {
-        setFormData({
-          title: blog.title || '',
-          content: blog.content || '',
-          excerpt: blog.excerpt || '',
-          featured_image: blog.featured_image || '',
-          author_name: blog.author_name || '',
-          category: blog.category || '',
-          tags: Array.isArray(blog.tags) ? blog.tags : [],
-          read_time_minutes: blog.read_time_minutes || 5,
-          is_published: blog.is_published !== false,
-          is_featured: blog.is_featured === true,
-          meta_title: blog.meta_title || '',
-          meta_description: blog.meta_description || ''
-        });
-        setImagePreview(blog.featured_image || '');
+        console.log('Loading existing blog data:', blog);
+        
+        // If we have a blog ID but no content, fetch the full blog data
+        if (blog.id && !blog.content) {
+          setContentLoading(true);
+          fetchFullBlogData(blog.id);
+        } else {
+          // We have full blog data, populate the form
+          populateFormData(blog);
+        }
       } else {
-        setFormData({
-          title: '',
-          content: '',
-          excerpt: '',
-          featured_image: '',
-          author_name: '',
-          category: '',
-          tags: [],
-          read_time_minutes: 5,
-          is_published: false,
-          is_featured: false,
-          meta_title: '',
-          meta_description: ''
-        });
-        setImagePreview('');
+        // Add mode - reset to defaults
+        resetFormData();
       }
       setErrors({});
     }
   }, [isOpen, blog]);
+
+  const fetchCategories = async () => {
+    setCategoriesLoading(true);
+    try {
+      const response = await fetch('/api/blog-categories');
+      if (response.ok) {
+        const categories = await response.json();
+        const categoryOptions = [
+          { value: '', label: 'Select Category...' },
+          ...categories.map(cat => ({
+            value: cat.name,
+            label: cat.name,
+            color: cat.color // Could be useful for styling later
+          }))
+        ];
+        setCategoryOptions(categoryOptions);
+        console.log('Loaded categories:', categoryOptions);
+      } else {
+        console.error('Failed to fetch categories');
+        // Keep default option if fetch fails
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // Keep default option if fetch fails
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  const fetchFullBlogData = async (blogId) => {
+    try {
+      const response = await fetch(`/api/admin/blogs/${blogId}`);
+      if (response.ok) {
+        const fullBlogData = await response.json();
+        console.log('Fetched full blog data:', fullBlogData);
+        populateFormData(fullBlogData);
+      } else {
+        console.error('Failed to fetch full blog data');
+        populateFormData(blog);
+      }
+    } catch (error) {
+      console.error('Error fetching full blog data:', error);
+      populateFormData(blog);
+    } finally {
+      setContentLoading(false);
+    }
+  };
+
+  const populateFormData = (blogData) => {
+    const tags = Array.isArray(blogData.tags) ? blogData.tags : [];
+    setFormData({
+      title: blogData.title || '',
+      content: blogData.content || '',
+      excerpt: blogData.excerpt || '',
+      featured_image: blogData.featured_image || '',
+      category: blogData.category || '',
+      tags: tags,
+      read_time_minutes: blogData.read_time_minutes || 5,
+      is_published: blogData.is_published !== false,
+      is_featured: blogData.is_featured === true,
+      meta_title: blogData.meta_title || '',
+      meta_description: blogData.meta_description || ''
+    });
+    setImagePreview(blogData.featured_image || '');
+    setTagsInput(tags.join(', ')); // Set the tags input field
+  };
+
+  const resetFormData = () => {
+    setFormData({
+      title: '',
+      content: '',
+      excerpt: '',
+      featured_image: '',
+      category: '',
+      tags: [],
+      read_time_minutes: 5,
+      is_published: false,
+      is_featured: false,
+      meta_title: '',
+      meta_description: ''
+    });
+    setImagePreview('');
+    setTagsInput(''); // Reset tags input
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -94,10 +155,33 @@ export default function BlogFormModal({
     }
   };
 
+  // Handle content change from rich text editor
+  const handleContentChange = (content) => {
+    setFormData(prev => ({ ...prev, content }));
+    
+    if (errors.content) {
+      setErrors(prev => ({ ...prev, content: '' }));
+    }
+
+    // Auto-calculate reading time based on content
+    const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).filter(word => word.length > 0).length;
+    const readingTime = Math.max(1, Math.ceil(wordCount / 200)); // Average 200 words per minute
+    setFormData(prev => ({ ...prev, read_time_minutes: readingTime }));
+  };
+
   const handleTagsChange = (e) => {
     const tagString = e.target.value;
-    const tags = tagString.split(',').map(tag => tag.trim()).filter(tag => tag);
+    setTagsInput(tagString); // Update the input display
+    
+    // Parse tags: split by comma, trim whitespace, filter empty
+    const tags = tagString
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0);
+    
     setFormData(prev => ({ ...prev, tags }));
+    
+    console.log('Tags updated:', tags); // Debug log
   };
 
   const handleImageUpload = async (e) => {
@@ -120,16 +204,16 @@ export default function BlogFormModal({
     setErrors(prev => ({ ...prev, image: '' }));
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'your_upload_preset');
-      formData.append('folder', 'eugene-essentials/blogs');
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'your_upload_preset');
+      formDataUpload.append('folder', 'eugene-essentials/blogs');
 
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
         {
           method: 'POST',
-          body: formData,
+          body: formDataUpload,
         }
       );
 
@@ -155,7 +239,6 @@ export default function BlogFormModal({
     if (!formData.title.trim()) newErrors.title = 'Title is required';
     if (!formData.content.trim()) newErrors.content = 'Content is required';
     if (!formData.excerpt.trim()) newErrors.excerpt = 'Excerpt is required';
-    if (!formData.author_name.trim()) newErrors.author_name = 'Author name is required';
     if (!formData.category) newErrors.category = 'Category is required';
 
     setErrors(newErrors);
@@ -203,7 +286,7 @@ export default function BlogFormModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg text-black shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg text-black shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-2xl font-serif font-semibold text-gray-900">
@@ -217,11 +300,21 @@ export default function BlogFormModal({
           </button>
         </div>
 
+        {/* Content Loading Indicator */}
+        {contentLoading && (
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-center">
+              <Loader className="w-5 h-5 animate-spin mr-2" />
+              <span className="text-gray-600">Loading blog content...</span>
+            </div>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Basic Info */}
+            <div className="lg:col-span-1 space-y-6">
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -232,9 +325,10 @@ export default function BlogFormModal({
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
+                  disabled={contentLoading}
                   className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                     errors.title ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  } ${contentLoading ? 'bg-gray-100' : ''}`}
                   placeholder="Enter blog title"
                 />
                 {errors.title && <p className="text-red-600 text-sm mt-1">{errors.title}</p>}
@@ -249,10 +343,11 @@ export default function BlogFormModal({
                   name="excerpt"
                   value={formData.excerpt}
                   onChange={handleInputChange}
+                  disabled={contentLoading}
                   rows={3}
                   className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                     errors.excerpt ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  } ${contentLoading ? 'bg-gray-100' : ''}`}
                   placeholder="Brief description of the blog post"
                   maxLength={500}
                 />
@@ -260,8 +355,8 @@ export default function BlogFormModal({
                 <p className="text-gray-500 text-sm mt-1">{formData.excerpt.length}/500 characters</p>
               </div>
 
-              {/* Category and Author */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Category */}
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Category *
@@ -270,51 +365,47 @@ export default function BlogFormModal({
                     name="category"
                     value={formData.category}
                     onChange={handleInputChange}
+                    disabled={contentLoading || categoriesLoading}
                     className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
                       errors.category ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    } ${contentLoading || categoriesLoading ? 'bg-gray-100' : ''}`}
                   >
-                    {categoryOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
+                    {categoriesLoading ? (
+                      <option value="">Loading categories...</option>
+                    ) : (
+                      categoryOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))
+                    )}
                   </select>
                   {errors.category && <p className="text-red-600 text-sm mt-1">{errors.category}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Author Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="author_name"
-                    value={formData.author_name}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
-                      errors.author_name ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Author name"
-                  />
-                  {errors.author_name && <p className="text-red-600 text-sm mt-1">{errors.author_name}</p>}
+                  {categoriesLoading && (
+                    <p className="text-gray-500 text-sm mt-1">Loading categories from database...</p>
+                  )}
                 </div>
               </div>
 
               {/* Tags and Read Time */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tags
                   </label>
                   <input
                     type="text"
-                    value={formData.tags.join(', ')}
+                    value={tagsInput}
                     onChange={handleTagsChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                    disabled={contentLoading}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                      contentLoading ? 'bg-gray-100' : ''
+                    }`}
                     placeholder="Tag1, Tag2, Tag3"
                   />
-                  <p className="text-gray-500 text-sm mt-1">Separate tags with commas</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Separate tags with commas. Current tags: {formData.tags.length > 0 ? formData.tags.join(', ') : 'None'}
+                  </p>
                 </div>
 
                 <div>
@@ -326,11 +417,64 @@ export default function BlogFormModal({
                     name="read_time_minutes"
                     value={formData.read_time_minutes}
                     onChange={handleInputChange}
+                    disabled={contentLoading}
                     min="1"
                     max="60"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                      contentLoading ? 'bg-gray-100' : ''
+                    }`}
                   />
+                  <p className="text-gray-500 text-sm mt-1">Auto-calculated based on content</p>
                 </div>
+              </div>
+
+              {/* Featured Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Featured Image
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  {imagePreview ? (
+                    <div className="space-y-3">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="max-h-32 mx-auto rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview('');
+                          setFormData(prev => ({ ...prev, featured_image: '' }));
+                        }}
+                        disabled={contentLoading}
+                        className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
+                      >
+                        Remove Image
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <ImageIcon className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2">
+                        <label className={`cursor-pointer ${contentLoading ? 'cursor-not-allowed' : ''}`}>
+                          <span className="text-sm font-medium text-gray-900">
+                            {imageUploading ? 'Uploading...' : 'Upload an image'}
+                          </span>
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            disabled={imageUploading || contentLoading}
+                          />
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                    </div>
+                  )}
+                </div>
+                {errors.image && <p className="text-red-600 text-sm mt-1">{errors.image}</p>}
               </div>
 
               {/* Publishing Options */}
@@ -341,6 +485,7 @@ export default function BlogFormModal({
                     name="is_published"
                     checked={formData.is_published}
                     onChange={handleInputChange}
+                    disabled={contentLoading}
                     className="w-4 h-4 text-[#355E3B] border-gray-300 rounded focus:ring-[#355E3B]"
                   />
                   <span className="ml-2 text-sm text-gray-700">Publish immediately</span>
@@ -352,61 +497,11 @@ export default function BlogFormModal({
                     name="is_featured"
                     checked={formData.is_featured}
                     onChange={handleInputChange}
+                    disabled={contentLoading}
                     className="w-4 h-4 text-[#355E3B] border-gray-300 rounded focus:ring-[#355E3B]"
                   />
                   <span className="ml-2 text-sm text-gray-700">Featured post</span>
                 </label>
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-6">
-              {/* Featured Image */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Featured Image
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  {imagePreview ? (
-                    <div className="space-y-4">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="max-h-48 mx-auto rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setImagePreview('');
-                          setFormData(prev => ({ ...prev, featured_image: '' }));
-                        }}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Remove Image
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                      <div className="mt-4">
-                        <label className="cursor-pointer">
-                          <span className="mt-2 block text-sm font-medium text-gray-900">
-                            {imageUploading ? 'Uploading...' : 'Upload an image'}
-                          </span>
-                          <input
-                            type="file"
-                            className="sr-only"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            disabled={imageUploading}
-                          />
-                        </label>
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
-                    </div>
-                  )}
-                </div>
-                {errors.image && <p className="text-red-600 text-sm mt-1">{errors.image}</p>}
               </div>
 
               {/* SEO Fields */}
@@ -422,7 +517,10 @@ export default function BlogFormModal({
                     name="meta_title"
                     value={formData.meta_title}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                    disabled={contentLoading}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                      contentLoading ? 'bg-gray-100' : ''
+                    }`}
                     placeholder="SEO title (optional)"
                     maxLength={60}
                   />
@@ -437,8 +535,11 @@ export default function BlogFormModal({
                     name="meta_description"
                     value={formData.meta_description}
                     onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                    disabled={contentLoading}
+                    rows={2}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
+                      contentLoading ? 'bg-gray-100' : ''
+                    }`}
                     placeholder="SEO description (optional)"
                     maxLength={160}
                   />
@@ -446,29 +547,42 @@ export default function BlogFormModal({
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Content Editor */}
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Content *
-            </label>
-            <textarea
-              name="content"
-              value={formData.content}
-              onChange={handleInputChange}
-              rows={12}
-              className={`w-full px-3 py-2 border rounded-lg text-black focus:ring-2 focus:ring-[#355E3B] focus:border-transparent ${
-                errors.content ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="Write your blog content here..."
-            />
-            {errors.content && <p className="text-red-600 text-sm mt-1">{errors.content}</p>}
+            {/* Right Column - Rich Text Editor */}
+            <div className="lg:col-span-2">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Content *
+                    {blog && (
+                      <span className="text-gray-500 text-xs ml-2">
+                        {contentLoading ? '(Loading...)' : '(Loaded from database)'}
+                      </span>
+                    )}
+                  </label>
+                  {errors.content && <p className="text-red-600 text-sm mb-2">{errors.content}</p>}
+                  
+                  <RichTextEditor
+                    value={formData.content}
+                    onChange={handleContentChange}
+                    disabled={contentLoading}
+                    placeholder={contentLoading ? 'Loading content...' : 'Start writing your blog post...'}
+                  />
+                  
+                  {formData.content && (
+                    <div className="mt-2 flex justify-between text-sm text-gray-500">
+                      <span>{formData.content.replace(/<[^>]*>/g, '').length} characters</span>
+                      <span>~{formData.content.replace(/<[^>]*>/g, '').split(/\s+/).filter(word => word.length > 0).length} words</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Submit Error */}
           {errors.submit && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {errors.submit}
             </div>
           )}
@@ -484,9 +598,9 @@ export default function BlogFormModal({
             </button>
             <button
               type="submit"
-              disabled={loading || imageUploading}
+              disabled={loading || imageUploading || contentLoading}
               className={`px-6 py-2 rounded-lg text-black transition-colors flex items-center gap-2 ${
-                loading || imageUploading
+                loading || imageUploading || contentLoading
                   ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                   : 'bg-[#355E3B] text-white hover:bg-[#2a4a2f]'
               }`}
@@ -508,4 +622,4 @@ export default function BlogFormModal({
       </div>
     </div>
   );
-}
+};

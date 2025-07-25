@@ -20,6 +20,7 @@ import NeighborhoodSection from "@/Components/NeighborhoodSection";
 import Blogs from "@/Components/Blogs";
 import RandomRestaurantsSection from "@/Components/RandomRestaurantSection";
 import BlogHomeSection from "@/Components/BlogHomeSection";
+import CommunitySignup from "@/Components/CommunitySignUp";
 
 
 
@@ -118,62 +119,11 @@ const Index = () => {
 
     <RandomRestaurantsSection />
 
-      {/* Community Signup Section */}
-      <section className="py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="relative bg-[#8A9A5B] rounded-[30px] lg:p-16 pt-56 px-5 pb-3 overflow-visible ">
-            {/* Background Image */}
-            <div className="absolute left-1/2 -translate-x-1/2 lg:left-8 lg:translate-x-0 -top-20 block">
-  <img
-    src="https://api.builder.io/api/v1/image/assets/TEMP/368f0253ba9aa3f28d3f09cb749966ca7d4c5b59?width=922"
-    alt="Community"
-    className="w-[300px] h-[300px] scale-150 lg:scale-100 xl:w-[461px] xl:h-[461px] object-contain"
-  />
-</div>
-
-            {/* Content */}
-            <div className="lg:ml-[400px] xl:ml-[500px] max-w-[500px]">
-              <h2 className="font-serif text-[40px]  font-semibold text-white lg:text-left">
-                Join Our Community
-              </h2>
-              <p className="font-serif text-[20px] font-semibold text-white mb-8 leading-relaxed">
-                Get updates about updates, community votes and
-                events
-              </p>
-
-              {/* Email Form */}
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                    className="w-full h-[55px] rounded-[20px] border border-black bg-[#F5F5F5] px-6 font-serif text-[20px] text-black placeholder-[#858585] focus:outline-none focus:ring-2 focus:ring-white"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full h-[40px] cursor-pointer rounded-[20px] bg-[#FFA500] text-white font-serif text-[20px] hover:bg-[#FF9500] transition-colors"
-                >
-                  Join Now
-                </button>
-              </form>
-
-              <p className="font-serif text-[12px] text-white text-center mt-4 leading-relaxed">
-                *We will not sell your information, we will only send you
-                updates or community related events
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Blogs />
-    </div>
+<CommunitySignup />
 
     <BlogHomeSection />
+    </div>
+
     </div>
 
   );

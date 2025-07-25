@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Search, Filter, X } from 'lucide-react';
+import { Calendar, Clock, Search, Filter, X } from 'lucide-react';
 import Link from 'next/link';
 
 export default function BlogsPage() {
@@ -17,11 +17,13 @@ export default function BlogsPage() {
     'Restaurant Review', 
     'Food Guide',
     'Local Events',
-    'Tips & Guides',
+    'Tips',
     'Behind the Scenes',
     'Chef Interviews',
     'Seasonal',
-    'News'
+    'News',
+    'Trends',
+    'Top 10'
   ];
 
   useEffect(() => {
@@ -56,11 +58,13 @@ export default function BlogsPage() {
       'Restaurant Review': '#8A9A5B',
       'Food Guide': '#276B00',
       'Local Events': '#FFA500',
-      'Tips & Guides': '#2E8B57',
+      'Tips': '#2E8B57',
       'Behind the Scenes': '#8B4513',
       'Chef Interviews': '#4B0082',
       'Seasonal': '#FF6347',
       'News': '#1E90FF',
+      'Trends': '#9B59B6',
+      'Top 10': '#E74C3C',
       'default': '#355E3B'
     };
     return colors[category] || colors.default;
@@ -225,8 +229,8 @@ export default function BlogsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {featuredBlogs.map((blog) => (
                 <Link key={blog.id} href={`/blogs/${blog.slug}`} className="group">
-                  <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow">
-                    <div className="h-64 bg-gray-200 overflow-hidden">
+                  <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow h-full flex flex-col">
+                    <div className="h-64 bg-gray-200 overflow-hidden flex-shrink-0">
                       {blog.featured_image ? (
                         <img
                           src={blog.featured_image}
@@ -239,9 +243,9 @@ export default function BlogsPage() {
                         </div>
                       )}
                     </div>
-                    <div className="p-6">
+                    <div className="p-6 flex flex-col flex-grow">
                       <div 
-                        className="text-white font-serif text-sm font-semibold px-3 py-1 rounded-lg inline-block mb-3"
+                        className="text-white font-serif text-sm font-semibold px-3 py-1 rounded-lg inline-block mb-3 w-fit"
                         style={{ backgroundColor: getCategoryColor(blog.category) }}
                       >
                         {blog.category}
@@ -250,11 +254,11 @@ export default function BlogsPage() {
                         {blog.title}
                       </h3>
                       {blog.excerpt && (
-                        <p className="text-gray-600 mb-4 line-clamp-3">
-                          {blog.excerpt}
+                        <p className="text-gray-600 mb-4 flex-grow">
+                          {blog.excerpt.length > 150 ? `${blog.excerpt.substring(0, 150)}...` : blog.excerpt}
                         </p>
                       )}
-                      <div className="flex items-center gap-4 text-gray-500 text-sm">
+                      <div className="flex items-center gap-4 text-gray-500 text-sm mt-auto">
                         <div className="flex items-center">
                           <User className="w-4 h-4 mr-1" />
                           <span>{blog.author_name}</span>
@@ -285,8 +289,8 @@ export default function BlogsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {regularBlogs.map((blog) => (
                 <Link key={blog.id} href={`/blogs/${blog.slug}`} className="group">
-                  <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow">
-                    <div className="h-48 bg-gray-200 overflow-hidden">
+                  <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow h-full flex flex-col">
+                    <div className="h-48 bg-gray-200 overflow-hidden flex-shrink-0">
                       {blog.featured_image ? (
                         <img
                           src={blog.featured_image}
@@ -299,9 +303,9 @@ export default function BlogsPage() {
                         </div>
                       )}
                     </div>
-                    <div className="p-6">
+                    <div className="p-6 flex flex-col flex-grow">
                       <div 
-                        className="text-white font-serif text-sm font-semibold px-3 py-1 rounded-lg inline-block mb-3"
+                        className="text-white font-serif text-sm font-semibold px-3 py-1 rounded-lg inline-block mb-3 w-fit"
                         style={{ backgroundColor: getCategoryColor(blog.category) }}
                       >
                         {blog.category}
@@ -310,11 +314,11 @@ export default function BlogsPage() {
                         {blog.title}
                       </h3>
                       {blog.excerpt && (
-                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                          {blog.excerpt}
+                        <p className="text-gray-600 text-sm mb-4 flex-grow">
+                          {blog.excerpt.length > 120 ? `${blog.excerpt.substring(0, 120)}...` : blog.excerpt}
                         </p>
                       )}
-                      <div className="flex items-center gap-3 text-gray-500 text-xs">
+                      <div className="flex items-center gap-3 text-gray-500 text-xs mt-auto">
                         <div className="flex items-center">
                           <User className="w-3 h-3 mr-1" />
                           <span>{blog.author_name}</span>

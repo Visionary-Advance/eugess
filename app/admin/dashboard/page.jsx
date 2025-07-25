@@ -13,15 +13,21 @@ import {
   Trash2,
   Search,
   Filter,
-  BarChart3
+  BarChart3,
+  FileText,
+  Eye,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import BusinessFormModal from '@/Components/BusinessFormModal';
 import CategoryFormModal from '@/Components/CategoryFormModal';
+import BlogFormModal from '@/Components/BlogFormModal';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [businesses, setBusinesses] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [blogs, setBlogs] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,8 +35,10 @@ export default function AdminDashboard() {
   // Modal states
   const [showBusinessModal, setShowBusinessModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBlogModal, setShowBlogModal] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [editingBlog, setEditingBlog] = useState(null);
   
   const router = useRouter();
 
@@ -47,20 +55,23 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [businessesRes, categoriesRes, statsRes] = await Promise.all([
+      const [businessesRes, categoriesRes, blogsRes, statsRes] = await Promise.all([
         fetch('/api/admin/businesses'),
         fetch('/api/admin/categories'),
+        fetch('/api/admin/blogs'),
         fetch('/api/admin/stats')
       ]);
 
-      const [businessesData, categoriesData, statsData] = await Promise.all([
+      const [businessesData, categoriesData, blogsData, statsData] = await Promise.all([
         businessesRes.json(),
         categoriesRes.json(),
+        blogsRes.json(),
         statsRes.json()
       ]);
 
       setBusinesses(businessesData || []);
       setCategories(categoriesData || []);
+      setBlogs(blogsData || []);
       setStats(statsData || {});
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -112,12 +123,27 @@ export default function AdminDashboard() {
     }
   };
 
+  const deleteBlog = async (id) => {
+    if (!confirm('Are you sure you want to delete this blog post?')) return;
+    
+    try {
+      const response = await fetch(`/api/admin/blogs/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setBlogs(prev => prev.filter(b => b.id !== id));
+        fetchDashboardData(); // Refresh stats
+      }
+    } catch (error) {
+      console.error('Error deleting blog:', error);
+    }
+  };
+
   const handleBusinessSave = (savedBusiness) => {
     if (editingBusiness) {
-      // Update existing business
       setBusinesses(prev => prev.map(b => b.id === savedBusiness.id ? savedBusiness : b));
     } else {
-      // Add new business
       setBusinesses(prev => [savedBusiness, ...prev]);
     }
     setEditingBusiness(null);
@@ -126,13 +152,21 @@ export default function AdminDashboard() {
 
   const handleCategorySave = (savedCategory) => {
     if (editingCategory) {
-      // Update existing category
       setCategories(prev => prev.map(c => c.id === savedCategory.id ? savedCategory : c));
     } else {
-      // Add new category
       setCategories(prev => [savedCategory, ...prev]);
     }
     setEditingCategory(null);
+    fetchDashboardData(); // Refresh stats
+  };
+
+  const handleBlogSave = (savedBlog) => {
+    if (editingBlog) {
+      setBlogs(prev => prev.map(b => b.id === savedBlog.id ? savedBlog : b));
+    } else {
+      setBlogs(prev => [savedBlog, ...prev]);
+    }
+    setEditingBlog(null);
     fetchDashboardData(); // Refresh stats
   };
 
@@ -146,10 +180,31 @@ export default function AdminDashboard() {
     setShowCategoryModal(true);
   };
 
+  const openBlogModal = (blog = null) => {
+    setEditingBlog(blog);
+    setShowBlogModal(true);
+  };
+
   const filteredBusinesses = businesses.filter(business =>
     business.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     business.city?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const filteredBlogs = blogs.filter(blog =>
+    blog.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    blog.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    blog.author_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not set';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   if (loading) {
     return (
@@ -213,6 +268,15 @@ export default function AdminDashboard() {
                 <Tags className="w-4 h-4" />
                 Categories
               </button>
+              <button
+                onClick={() => setActiveTab('blogs')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                  activeTab === 'blogs' ? 'bg-[#355E3B] text-white' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Blog Posts
+              </button>
             </nav>
           </div>
 
@@ -224,7 +288,7 @@ export default function AdminDashboard() {
                 <h2 className="text-2xl font-serif font-semibold text-gray-900">Dashboard Overview</h2>
                 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="bg-white p-6 rounded-lg shadow-sm">
                     <div className="flex items-center">
                       <Building className="w-8 h-8 text-[#355E3B]" />
@@ -247,6 +311,16 @@ export default function AdminDashboard() {
                   
                   <div className="bg-white p-6 rounded-lg shadow-sm">
                     <div className="flex items-center">
+                      <FileText className="w-8 h-8 text-[#355E3B]" />
+                      <div className="ml-4">
+                        <h3 className="text-2xl font-bold text-gray-900">{blogs.length}</h3>
+                        <p className="text-gray-600">Blog Posts</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-lg shadow-sm">
+                    <div className="flex items-center">
                       <Users className="w-8 h-8 text-[#355E3B]" />
                       <div className="ml-4">
                         <h3 className="text-2xl font-bold text-gray-900">{stats.activeBusinesses || businesses.filter(b => b.is_active).length}</h3>
@@ -257,22 +331,50 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Businesses</h3>
-                  <div className="space-y-3">
-                    {businesses.slice(0, 5).map((business) => (
-                      <div key={business.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                        <div>
-                          <p className="font-medium text-gray-900">{business.name}</p>
-                          <p className="text-sm text-gray-600">{business.city}, {business.state}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Businesses</h3>
+                    <div className="space-y-3">
+                      {businesses.slice(0, 5).map((business) => (
+                        <div key={business.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                          <div>
+                            <p className="font-medium text-gray-900">{business.name}</p>
+                            <p className="text-sm text-gray-600">{business.city}, {business.state}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            business.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {business.is_active ? 'Active' : 'Inactive'}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          business.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {business.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Blog Posts</h3>
+                    <div className="space-y-3">
+                      {blogs.slice(0, 5).map((blog) => (
+                        <div key={blog.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                          <div>
+                            <p className="font-medium text-gray-900 line-clamp-1">{blog.title}</p>
+                            <p className="text-sm text-gray-600">{blog.author_name} • {formatDate(blog.created_at)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {blog.is_featured && (
+                              <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                                Featured
+                              </span>
+                            )}
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              blog.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {blog.is_published ? 'Published' : 'Draft'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -412,6 +514,152 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+
+            {/* Blogs Tab */}
+            {activeTab === 'blogs' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-serif font-semibold text-gray-900">Manage Blog Posts</h2>
+                  <button 
+                    onClick={() => openBlogModal()}
+                    className="flex items-center gap-2 bg-[#355E3B] text-white px-4 py-2 rounded-lg hover:bg-[#2a4a2f] transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Blog Post
+                  </button>
+                </div>
+
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search blog posts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#355E3B] focus:border-transparent"
+                  />
+                </div>
+
+                {/* Blogs Table */}
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Title
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Author
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Category
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Stats
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredBlogs.map((blog) => (
+                        <tr key={blog.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div className="max-w-xs">
+                              <div className="text-sm font-medium text-gray-900 line-clamp-2">{blog.title}</div>
+                              <div className="text-sm text-gray-500">{formatDate(blog.created_at)}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{blog.author_name || 'Anonymous'}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{blog.category || 'Uncategorized'}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                blog.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {blog.is_published ? 'Published' : 'Draft'}
+                              </span>
+                              {blog.is_featured && (
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                  Featured
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3 text-sm text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                {blog.view_count || 0}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {blog.read_time_minutes || 5}min
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex items-center gap-2">
+                              {blog.is_published && (
+                                <a 
+                                  href={`/blogs/${blog.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="View blog post"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </a>
+                              )}
+                              <button 
+                                onClick={() => openBlogModal(blog)}
+                                className="text-[#355E3B] hover:text-[#2a4a2f]"
+                                title="Edit blog post"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => deleteBlog(blog.id)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Delete blog post"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {filteredBlogs.length === 0 && (
+                    <div className="text-center py-12">
+                      <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No blog posts found</h3>
+                      <p className="text-gray-500 mb-4">
+                        {searchTerm ? `No posts match "${searchTerm}"` : 'Get started by creating your first blog post.'}
+                      </p>
+                      <button 
+                        onClick={() => openBlogModal()}
+                        className="inline-flex items-center gap-2 bg-[#355E3B] text-white px-4 py-2 rounded-lg hover:bg-[#2a4a2f] transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Create Blog Post
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -436,6 +684,16 @@ export default function AdminDashboard() {
         }}
         category={editingCategory}
         onSave={handleCategorySave}
+      />
+
+      <BlogFormModal
+        isOpen={showBlogModal}
+        onClose={() => {
+          setShowBlogModal(false);
+          setEditingBlog(null);
+        }}
+        blog={editingBlog}
+        onSave={handleBlogSave}
       />
     </div>
   );
