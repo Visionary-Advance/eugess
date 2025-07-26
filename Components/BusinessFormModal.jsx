@@ -338,8 +338,7 @@ export default function BusinessFormModal({
     return Object.keys(newErrors).length === 0;
   };
 
-// Fixed handleSubmit function for BusinessFormModal.jsx
-
+// Updated handleSubmit function for BusinessFormModal
 const handleSubmit = async (e) => {
   e.preventDefault();
   
@@ -375,45 +374,47 @@ const handleSubmit = async (e) => {
       if (savedBusiness.id && businessHours.length > 0) {
         try {
           console.log('Saving business hours for business ID:', savedBusiness.id);
-          console.log('Business hours data:', businessHours);
+          
+          // Format hours for API - ensure proper format
+          const formattedHours = businessHours.map(hour => ({
+            day_of_week: hour.day_of_week,
+            is_closed: Boolean(hour.is_closed),
+            is_24_hours: Boolean(hour.is_24_hours),
+            open_time: (!hour.is_closed && !hour.is_24_hours && hour.open_time) ? hour.open_time : null,
+            close_time: (!hour.is_closed && !hour.is_24_hours && hour.close_time) ? hour.close_time : null
+          }));
+          
+          console.log('Sending hours data to API:');
+          formattedHours.forEach(hour => {
+            console.log(`Day ${hour.day_of_week}: ${hour.is_closed ? 'CLOSED' : `${hour.open_time} - ${hour.close_time}`}`);
+          });
           
           const hoursResponse = await fetch(`/api/admin/businesses/${savedBusiness.id}/hours`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ hours: businessHours }),
+            body: JSON.stringify({ hours: formattedHours }),
           });
 
-          console.log('Hours response status:', hoursResponse.status);
-          console.log('Hours response headers:', Object.fromEntries(hoursResponse.headers.entries()));
-
           if (!hoursResponse.ok) {
-            // Get response text first to see what the server is actually returning
-            const responseText = await hoursResponse.text();
-            console.error('Hours response error text:', responseText);
+            const hoursErrorText = await hoursResponse.text();
+            console.error('Hours API Error Response:', hoursErrorText);
             
             let hoursErrorData;
             try {
-              hoursErrorData = JSON.parse(responseText);
+              hoursErrorData = JSON.parse(hoursErrorText);
             } catch (parseError) {
-              console.error('Could not parse error response as JSON:', parseError);
-              hoursErrorData = { error: 'Invalid JSON response', rawResponse: responseText };
+              console.error('Could not parse hours error response as JSON');
+              hoursErrorData = { error: 'Server error', details: hoursErrorText };
             }
             
-            console.error('Error saving business hours:', {
-              status: hoursResponse.status,
-              statusText: hoursResponse.statusText,
-              error: hoursErrorData,
-              businessId: savedBusiness.id,
-              hours: businessHours,
-              url: `/api/admin/businesses/${savedBusiness.id}/hours`
-            });
+            console.error('Error saving business hours:', hoursErrorData);
             
-            // Don't fail the entire operation, just show a warning
+            // Show warning but don't fail the entire operation
             setErrors(prev => ({ 
               ...prev, 
-              hoursWarning: `Business saved successfully, but hours could not be saved: ${hoursErrorData.error || hoursErrorData.rawResponse || 'Unknown error'}` 
+              hoursWarning: `Business saved successfully, but hours could not be saved: ${hoursErrorData.error || 'Unknown error'}. Please try editing the business again to set hours.` 
             }));
           } else {
             const hoursResult = await hoursResponse.json();
@@ -423,7 +424,7 @@ const handleSubmit = async (e) => {
           console.error('Exception while saving business hours:', hoursError);
           setErrors(prev => ({ 
             ...prev, 
-            hoursWarning: `Business saved successfully, but hours could not be saved: ${hoursError.message}` 
+            hoursWarning: `Business saved successfully, but hours could not be saved: ${hoursError.message}. Please try editing the business again to set hours.` 
           }));
         }
       } else {

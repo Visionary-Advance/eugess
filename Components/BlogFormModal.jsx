@@ -33,6 +33,7 @@ export default function BlogFormModal({
     { value: '', label: 'Select Category...' }
   ]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+  
 
   // Initialize form data when modal opens
   useEffect(() => {
@@ -58,6 +59,8 @@ export default function BlogFormModal({
       setErrors({});
     }
   }, [isOpen, blog]);
+
+  
 
   const fetchCategories = async () => {
     setCategoriesLoading(true);

@@ -5,6 +5,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useCurrentDayHours, getHourDisplay } from '@/Components/BusinessHoursDisplay';
 
 export default function PopularSection() {
   const [popularSpots, setPopularSpots] = useState([]);
@@ -55,6 +56,25 @@ export default function PopularSection() {
         onError={handleImageError}
         loading="lazy"
       />
+    );
+  };
+
+  // Component to show current day hours for each business
+  const BusinessHours = ({ businessId }) => {
+    const { currentDayHours, loading: hoursLoading } = useCurrentDayHours(businessId);
+
+    if (hoursLoading) {
+      return (
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-24"></div>
+        </div>
+      );
+    }
+
+    return (
+      <span className="font-sans text-[14px] text-black mt-1">
+        {getHourDisplay(currentDayHours)}
+      </span>
     );
   };
 
@@ -132,18 +152,9 @@ export default function PopularSection() {
                         className="w-[25px] h-[25px] text-black flex-shrink-0"
                         strokeWidth={2}
                       />
-                      <span className="font-sans text-[14px] text-black mt-1">
-                        {spot.hours || "Hours not available"}
-                      </span>
+                      <BusinessHours businessId={spot.id} />
                     </div>
                   </div>
-
-                  {/* View More Button */}
-                  <a href={`/business/${spot.slug}`}>
-                    <button className="bg-[#355E3B] cursor-pointer text-white font-serif text-[20px] px-6 py-2 rounded-[14px] hover:bg-[#2a4a2f] transition-colors">
-                      View More
-                    </button>
-                  </a>
                 </div>
               </div>
             </div>

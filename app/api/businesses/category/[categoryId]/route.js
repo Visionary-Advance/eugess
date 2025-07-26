@@ -1,4 +1,6 @@
 // app/api/businesses/category/[categoryId]/route.js
+// Simple version that should work with your current schema
+
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -6,47 +8,57 @@ const prisma = new PrismaClient();
 export async function GET(request, { params }) {
   try {
     const { categoryId } = await params;
+    
+    console.log('Fetching businesses for category:', categoryId);
 
-    const businessesWithDetails = await prisma.$queryRaw`
-      SELECT 
-        b.id,
-        b.name,
-        b.slug,
-        b.description,
-        b.short_description,
-        b.phone,
-        b.email,
-        b.website,
-        b.street_address,
-        b.city,
-        b.state,
-        b.zip_code,
-        b.neighborhood_id,
-        b.price_level,
-        b.cuisine_type,
-        b.is_featured,
-        b.has_takeout,
-        b.has_delivery,
-        b.has_outdoor_seating,
-        b.is_wheelchair_accessible,
-        b.has_wifi,
-        b.is_pet_friendly,
-        b.has_parking,
-        bi.url as image
-      FROM businesses b
-      JOIN business_categories bc ON b.id = bc.business_id
-      LEFT JOIN business_images bi ON b.id = bi.business_id AND bi.is_primary = true
-      WHERE bc.category_id = ${categoryId}
-      AND b.is_active = true
-      ORDER BY b.is_featured DESC, b.name ASC
-    `;
+    // Method 1: Try junction table approach
+    let businesses = [];
+    
+    try {
+      // Get business IDs from junction table
+      const businessCategories = await prisma.business_categories.findMany({
+        where: { category_id: categoryId },
+        select: { business_id: true }
+      });
+      
+      const businessIds = businessCategories.map(bc => bc.business_id);
+      
+      if (businessIds.length > 0) {
+        businesses = await prisma.businesses.findMany({
+          where: {
+            id: { in: businessIds },
+            is_active: true
+          }
+        });
+      }
+      
+      console.log(`Junction table method: Found ${businesses.length} businesses`);
+    } catch (junctionError) {
+      console.log('Junction table method failed:', junctionError.message);
+      
+      // Method 2: Try direct foreign key if junction fails
+      try {
+        businesses = await prisma.businesses.findMany({
+          where: {
+            category_id: categoryId, // This might not exist
+            is_active: true
+          }
+        });
+        console.log(`Direct FK method: Found ${businesses.length} businesses`);
+      } catch (directError) {
+        console.log('Direct FK method also failed:', directError.message);
+        businesses = []; // Return empty array if both methods fail
+      }
+    }
 
-    const serializedBusinesses = businessesWithDetails.map(business => ({
+    // Convert BigInt IDs to strings
+    const serializedBusinesses = businesses.map(business => ({
       ...business,
       id: business.id.toString(),
     }));
 
     return Response.json(serializedBusinesses);
+    
   } catch (error) {
     console.error('Error fetching businesses by category:', error);
     return Response.json({ error: error.message }, { status: 500 });

@@ -24,6 +24,36 @@ export default function DirectoryPage() {
     cuisines: []
   });
 
+  // Image component with fallback
+  const BusinessImage = ({ business, className = "" }) => {
+    const [imageError, setImageError] = useState(false);
+    
+    const handleImageError = () => {
+      setImageError(true);
+    };
+
+    if (imageError || !business.image_url) {
+      return (
+        <div className={`bg-gradient-to-br from-[#355E3B] to-[#8A9A5B] flex items-center justify-center ${className}`}>
+          <div className="text-center text-white p-4">
+            <div className="text-3xl mb-2">🍽️</div>
+            <p className="text-sm font-serif line-clamp-2">{business.name}</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={business.image_url}
+        alt={business.name}
+        className={className}
+        onError={handleImageError}
+        loading="lazy"
+      />
+    );
+  };
+
   // Filter options
   const filterOptions = {
     priceLevel: [
@@ -273,7 +303,7 @@ export default function DirectoryPage() {
           
           <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center">
             {/* Category Selector */}
-            <div className="relative">
+            <div className="relative w-52">
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center justify-between w-full max-w-md bg-white border border-gray-300 rounded-2xl px-6 py-4 text-left hover:border-[#355E3B] transition-colors"
@@ -533,14 +563,13 @@ export default function DirectoryPage() {
             {filteredBusinesses.map((business) => (
               <div
                 key={business.id}
-                className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow "
+                className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
               >
                 {/* Business Image */}
-                <div className="h-48 bg-gray-200 overflow-hidden">
-                  <img
-                    src={business.image || "https://via.placeholder.com/400x200?text=No+Image"}
-                    alt={business.name}
-                    className="w-full h-full object-cover"
+                <div className="h-48 overflow-hidden">
+                  <BusinessImage
+                    business={business}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
                 </div>
 
@@ -624,10 +653,10 @@ export default function DirectoryPage() {
                   )}
 
                   {/* View Details Button */}
-                  <Link href={`/business/${business.slug}`} >
-                  <button className="w-full bg-[#355E3B] cursor-pointer text-white font-serif text-lg py-3 rounded-xl hover:bg-[#2a4a2f] transition-colors">
-                    View Details
-                  </button>
+                  <Link href={`/business/${business.slug || business.id}`}>
+                    <button className="w-full bg-[#355E3B] cursor-pointer text-white font-serif text-lg py-3 rounded-xl hover:bg-[#2a4a2f] transition-colors">
+                      View Details
+                    </button>
                   </Link>
                 </div>
               </div>

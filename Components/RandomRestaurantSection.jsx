@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Star, Phone, MapPin, ChevronRight } from "lucide-react";
-import Link from "next/link";
 
 export default function RandomRestaurantsSection() {
   const [restaurants, setRestaurants] = useState([]);
@@ -57,6 +56,36 @@ export default function RandomRestaurantsSection() {
     return isOpen;
   };
 
+  // Image component with fallback
+  const RestaurantImage = ({ restaurant }) => {
+    const [imageError, setImageError] = useState(false);
+    
+    const handleImageError = () => {
+      setImageError(true);
+    };
+
+    if (imageError || !restaurant.image_url) {
+      return (
+        <div className="w-full h-full bg-gradient-to-br from-[#355E3B] to-[#8A9A5B] rounded-l-[25px] flex items-center justify-center">
+          <div className="text-center text-white p-2">
+            <div className="text-2xl mb-1">🍽️</div>
+            <p className="text-xs font-serif line-clamp-2">{restaurant.name}</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={restaurant.image_url}
+        alt={restaurant.name}
+        className="w-full h-full object-cover rounded-l-[25px]"
+        onError={handleImageError}
+        loading="lazy"
+      />
+    );
+  };
+
   if (loading) {
     return (
       <section className="py-16 px-4">
@@ -65,11 +94,11 @@ export default function RandomRestaurantsSection() {
             <h1 className="font-serif text-[40px] font-semibold text-black text-left mb-4 lg:mb-0">
               Browse All Restaurants
             </h1>
-            <Link href="/directory/all">
+            <a href="/directory/all">
               <button className="block border border-primary active:scale-95 text-[#355E3B] hover:bg-[#355E3B] cursor-pointer font-serif text-[24px] md:text-[30px] px-6 py-2 rounded-[20px] hover:bg-primary hover:text-white transition-colors">
                 Browse All
               </button>
-            </Link>
+            </a>
           </div>
 
           <div className="space-y-6">
@@ -99,11 +128,11 @@ export default function RandomRestaurantsSection() {
             <h1 className="font-serif text-[40px] font-semibold text-black text-left mb-4 lg:mb-0">
               Browse All Restaurants
             </h1>
-            <Link href="/directory/all">
+            <a href="/directory/all">
               <button className="block border border-primary active:scale-95 text-[#355E3B] hover:bg-[#355E3B] cursor-pointer font-serif text-[24px] md:text-[30px] px-6 py-2 rounded-[20px] hover:bg-primary hover:text-white transition-colors">
                 Browse All
               </button>
-            </Link>
+            </a>
           </div>
           <div className="text-center py-12">
             <p className="text-xl text-gray-600">No restaurants found. Check back soon!</p>
@@ -121,11 +150,11 @@ export default function RandomRestaurantsSection() {
           <h1 className="font-serif text-[40px] font-semibold text-black text-left mb-4 lg:mb-0">
             Browse All Restaurants
           </h1>
-          <Link href="/directory/all">
+          <a href="/directory/all">
             <button className="block border border-primary active:scale-95 text-[#355E3B] hover:bg-[#355E3B] cursor-pointer font-serif text-[24px] md:text-[30px] px-6 py-2 rounded-[20px] hover:bg-primary hover:text-white transition-colors">
               Browse All
             </button>
-          </Link>
+          </a>
         </div>
 
         {/* Restaurant Cards */}
@@ -137,12 +166,12 @@ export default function RandomRestaurantsSection() {
             const address = formatAddress(restaurant);
 
             return (
-              <Link key={restaurant.id} href={`/business/${restaurant.slug}`}>
+              <a key={restaurant.id} href={`/business/${restaurant.slug}`}>
                 <div className="bg-[#F5F5F5] border my-6 border-black rounded-[30px] overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                   <div className="flex">
                     {/* Restaurant Image */}
                     <div className="w-26 lg:w-[200px] lg:h-[200px] bg-white border-r border-black rounded-l-[25px] flex-shrink-0">
-                      <div className="w-full h-full bg-gray-200 rounded-l-[25px]"></div>
+                      <RestaurantImage restaurant={restaurant} />
                     </div>
 
                     {/* Restaurant Info */}
@@ -221,7 +250,7 @@ export default function RandomRestaurantsSection() {
                     </div>
                   </div>
                 </div>
-              </Link>
+              </a>
             );
           })}
         </div>

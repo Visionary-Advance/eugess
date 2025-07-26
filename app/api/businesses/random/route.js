@@ -1,4 +1,3 @@
-// app/api/businesses/random/route.js
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -49,6 +48,7 @@ export async function GET() {
             cuisine_type: true,
             price_level: true,
             is_featured: true,
+            image_url: true, // Add this line
             created_at: true
           },
           orderBy: {

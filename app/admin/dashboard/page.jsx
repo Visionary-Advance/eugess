@@ -17,11 +17,16 @@ import {
   FileText,
   Eye,
   Calendar,
-  Clock
+  Clock,
+  Mail,
+  UserCheck,
+  TrendingUp,
+  UserPlus
 } from 'lucide-react';
 import BusinessFormModal from '@/Components/BusinessFormModal';
 import CategoryFormModal from '@/Components/CategoryFormModal';
 import BlogFormModal from '@/Components/BlogFormModal';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -180,10 +185,7 @@ export default function AdminDashboard() {
     setShowCategoryModal(true);
   };
 
-  const openBlogModal = (blog = null) => {
-    setEditingBlog(blog);
-    setShowBlogModal(true);
-  };
+ 
 
   const filteredBusinesses = businesses.filter(business =>
     business.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -277,6 +279,13 @@ export default function AdminDashboard() {
                 <FileText className="w-4 h-4" />
                 Blog Posts
               </button>
+              {/* Subscribers link */}
+              <Link href="/admin/subscribers">
+                <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-gray-700 hover:bg-gray-100">
+                  <Mail className="w-4 h-4" />
+                  Subscribers
+                </button>
+              </Link>
             </nav>
           </div>
 
@@ -287,8 +296,8 @@ export default function AdminDashboard() {
               <div className="space-y-6">
                 <h2 className="text-2xl font-serif font-semibold text-gray-900">Dashboard Overview</h2>
                 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Main Stats Cards - Updated with subscribers */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="bg-white p-6 rounded-lg shadow-sm">
                     <div className="flex items-center">
                       <Building className="w-8 h-8 text-[#355E3B]" />
@@ -313,18 +322,52 @@ export default function AdminDashboard() {
                     <div className="flex items-center">
                       <FileText className="w-8 h-8 text-[#355E3B]" />
                       <div className="ml-4">
-                        <h3 className="text-2xl font-bold text-gray-900">{blogs.length}</h3>
+                        <h3 className="text-2xl font-bold text-gray-900">{stats.totalBlogs || blogs.length}</h3>
                         <p className="text-gray-600">Blog Posts</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Email Subscribers Card */}
+                  <div className="bg-white p-6 rounded-lg shadow-sm">
+                    <div className="flex items-center">
+                      <Mail className="w-8 h-8 text-[#355E3B]" />
+                      <div className="ml-4">
+                        <h3 className="text-2xl font-bold text-gray-900">{stats.totalSubscribers || 0}</h3>
+                        <p className="text-gray-600">Email Subscribers</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subscriber Stats Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white p-6 rounded-lg shadow-sm">
+                    <div className="flex items-center">
+                      <UserCheck className="w-8 h-8 text-green-600" />
+                      <div className="ml-4">
+                        <h3 className="text-2xl font-bold text-gray-900">{stats.activeSubscribers || 0}</h3>
+                        <p className="text-gray-600">Active Subscribers</p>
                       </div>
                     </div>
                   </div>
                   
                   <div className="bg-white p-6 rounded-lg shadow-sm">
                     <div className="flex items-center">
-                      <Users className="w-8 h-8 text-[#355E3B]" />
+                      <UserPlus className="w-8 h-8 text-blue-600" />
                       <div className="ml-4">
-                        <h3 className="text-2xl font-bold text-gray-900">{stats.activeBusinesses || businesses.filter(b => b.is_active).length}</h3>
-                        <p className="text-gray-600">Active Businesses</p>
+                        <h3 className="text-2xl font-bold text-gray-900">{stats.recentSubscribers || 0}</h3>
+                        <p className="text-gray-600">New This Month</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-lg shadow-sm">
+                    <div className="flex items-center">
+                      <TrendingUp className="w-8 h-8 text-purple-600" />
+                      <div className="ml-4">
+                        <h3 className="text-2xl font-bold text-gray-900">{stats.subscriberGrowthRate || 0}%</h3>
+                        <p className="text-gray-600">Growth Rate</p>
                       </div>
                     </div>
                   </div>
@@ -333,7 +376,12 @@ export default function AdminDashboard() {
                 {/* Recent Activity */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-white rounded-lg shadow-sm p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Businesses</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Recent Businesses</h3>
+                      <button onClick={() => setActiveTab('businesses')}>
+                        <span className="text-[#355E3B] hover:underline text-sm">View all</span>
+                      </button>
+                    </div>
                     <div className="space-y-3">
                       {businesses.slice(0, 5).map((business) => (
                         <div key={business.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
@@ -352,7 +400,12 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="bg-white rounded-lg shadow-sm p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Blog Posts</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Recent Blog Posts</h3>
+                      <button onClick={() => setActiveTab('blogs')}>
+                        <span className="text-[#355E3B] hover:underline text-sm">View all</span>
+                      </button>
+                    </div>
                     <div className="space-y-3">
                       {blogs.slice(0, 5).map((blog) => (
                         <div key={blog.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
@@ -377,6 +430,26 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Subscriber Sources */}
+                {stats.subscribersBySource && stats.subscribersBySource.length > 0 && (
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Subscriber Sources</h3>
+                      <Link href="/admin/subscribers">
+                        <span className="text-[#355E3B] hover:underline text-sm">Manage subscribers</span>
+                      </Link>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {stats.subscribersBySource.slice(0, 3).map((source) => (
+                        <div key={source.source} className="bg-gray-50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-[#355E3B]">{source.count}</div>
+                          <div className="text-sm text-gray-600">{source.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -446,18 +519,33 @@ export default function AdminDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button 
-                              onClick={() => openBusinessModal(business)}
-                              className="text-[#355E3B] hover:text-[#2a4a2f] mr-4"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => deleteBusiness(business.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              {business.is_active && (
+                                <a 
+                                  href={`/business/${business.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Preview business page"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </a>
+                              )}
+                              <button 
+                                onClick={() => openBusinessModal(business)}
+                                className="text-[#355E3B] hover:text-[#2a4a2f]"
+                                title="Edit business"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => deleteBusiness(business.id)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Delete business"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -695,6 +783,8 @@ export default function AdminDashboard() {
         blog={editingBlog}
         onSave={handleBlogSave}
       />
+
+      
     </div>
   );
 }

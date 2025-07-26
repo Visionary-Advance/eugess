@@ -1,268 +1,268 @@
-// Fixed app/api/admin/businesses/[id]/hours/route.js
+
+// app/api/admin/businesses/[id]/hours/route.js
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Helper function to convert time string to Date object for today
-function timeStringToDateTime(timeString) {
-  if (!timeString) return null;
+// Helper function to convert MySQL TIME back to time string
+function mySQLTimeToTimeString(mysqlTime) {
+  if (!mysqlTime) return null;
   
-  // Create a date object for today with the specified time
-  const today = new Date();
-  const [hours, minutes] = timeString.split(':');
+  // Handle different possible formats
+  if (typeof mysqlTime === 'string') {
+    // If it's already in HH:mm or HH:mm:ss format
+    if (mysqlTime.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+      return mysqlTime.substring(0, 5); // Return HH:mm format
+    }
+  }
   
-  const dateTime = new Date(today);
-  dateTime.setHours(parseInt(hours, 10));
-  dateTime.setMinutes(parseInt(minutes, 10));
-  dateTime.setSeconds(0);
-  dateTime.setMilliseconds(0);
+  // If it's a Date object (shouldn't happen with TIME fields, but just in case)
+  if (mysqlTime instanceof Date) {
+    const hours = mysqlTime.getHours().toString().padStart(2, '0');
+    const minutes = mysqlTime.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
   
-  return dateTime;
+  // If it's a time string from MySQL TIME field
+  try {
+    // MySQL TIME fields often return as "HH:mm:ss" strings
+    const timeStr = mysqlTime.toString();
+    const parts = timeStr.split(':');
+    if (parts.length >= 2) {
+      const hours = parts[0].padStart(2, '0');
+      const minutes = parts[1].padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+  } catch (error) {
+    console.warn('Could not parse MySQL time:', mysqlTime);
+  }
+  
+  return null;
 }
 
-// Helper function to convert DateTime back to time string
-function dateTimeToTimeString(dateTime) {
-  if (!dateTime) return null;
-  
-  const hours = dateTime.getHours().toString().padStart(2, '0');
-  const minutes = dateTime.getMinutes().toString().padStart(2, '0');
-  
-  return `${hours}:${minutes}`;
-}
-
-// Helper function to convert BigInt to string
-function serializeBigInt(obj) {
-  return JSON.parse(JSON.stringify(obj, (key, value) =>
-    typeof value === 'bigint' ? value.toString() : value
-  ));
-}
-
-// Get business hours for admin
+// Get business hours
 export async function GET(request, { params }) {
   try {
-    console.log('GET business hours called for business:', params);
     const { id } = await params;
 
     if (!id) {
-      console.error('No business ID provided');
       return Response.json({ error: 'Business ID is required' }, { status: 400 });
     }
 
-    console.log('Looking for business with ID:', id);
-
-    // Check if business exists first
+    // Check if business exists
     const business = await prisma.businesses.findUnique({
       where: { id },
       select: { id: true, name: true }
     });
 
     if (!business) {
-      console.error('Business not found with ID:', id);
       return Response.json({ error: 'Business not found' }, { status: 404 });
     }
 
-    console.log('Business found:', business);
+    // Use raw SQL to get hours without timezone conversion
+    const hours = await prisma.$queryRaw`
+      SELECT id, business_id, day_of_week,
+             TIME_FORMAT(open_time, '%H:%i') as open_time,
+             TIME_FORMAT(close_time, '%H:%i') as close_time,
+             is_closed, is_24_hours, created_at
+      FROM business_hours
+      WHERE business_id = ${id}
+      ORDER BY day_of_week ASC
+    `;
 
-    const hours = await prisma.business_hours.findMany({
-      where: {
-        business_id: id
-      },
-      orderBy: {
-        day_of_week: 'asc'
-      }
-    });
-
-    console.log(`Found ${hours.length} hours for business ${id}`);
-
-    // Convert all BigInt IDs to strings and DateTime to time strings
+    // Convert BigInt IDs to strings
     const serializedHours = hours.map(hour => ({
-      ...hour,
       id: hour.id.toString(),
       business_id: hour.business_id.toString(),
-      open_time: dateTimeToTimeString(hour.open_time),
-      close_time: dateTimeToTimeString(hour.close_time)
+      day_of_week: hour.day_of_week,
+      open_time: hour.open_time, // Already formatted as HH:mm
+      close_time: hour.close_time, // Already formatted as HH:mm
+      is_closed: Boolean(hour.is_closed),
+      is_24_hours: Boolean(hour.is_24_hours),
+      created_at: hour.created_at
     }));
 
     return Response.json(serializedHours);
   } catch (error) {
     console.error('Error fetching business hours:', error);
     return Response.json({ 
-      error: error.message,
-      details: error.stack 
+      error: 'Internal server error',
+      details: error.message 
     }, { status: 500 });
   }
 }
 
-// Save/Update business hours for admin
+// Save/Update business hours
 export async function POST(request, { params }) {
   try {
-    console.log('POST business hours called');
-    console.log('Params received:', params);
-    
     const { id } = await params;
-    console.log('Business ID extracted:', id);
     
     if (!id) {
-      console.error('No business ID provided in params');
       return Response.json({ error: 'Business ID is required' }, { status: 400 });
     }
 
     const requestBody = await request.json();
-    console.log('Request body received:', requestBody);
-    
     const { hours } = requestBody;
     
-    if (!hours) {
-      console.error('No hours data provided');
-      return Response.json({ error: 'Hours data is required' }, { status: 400 });
+    if (!hours || !Array.isArray(hours)) {
+      return Response.json({ error: 'Hours data must be an array' }, { status: 400 });
     }
 
-    if (!Array.isArray(hours)) {
-      console.error('Hours data is not an array:', typeof hours);
-      return Response.json({ error: 'Hours must be an array' }, { status: 400 });
-    }
-
-    console.log('Validating business exists...');
-    // Check if business exists first
+    // Check if business exists
     const business = await prisma.businesses.findUnique({
       where: { id },
       select: { id: true, name: true }
     });
 
     if (!business) {
-      console.error('Business not found with ID:', id);
       return Response.json({ error: 'Business not found' }, { status: 404 });
     }
 
-    console.log('Business found:', business);
+    // Validate hours data
+    const validationErrors = [];
+    const validatedHours = [];
 
-    console.log('Deleting existing hours...');
-    // Delete existing hours for this business
-    const deleteResult = await prisma.business_hours.deleteMany({
-      where: { business_id: id }
-    });
-    
-    console.log('Deleted existing hours:', deleteResult);
-
-    // Validate and prepare hours data
-    const validHours = [];
     for (let i = 0; i < hours.length; i++) {
       const hour = hours[i];
-      console.log(`Processing hour ${i}:`, hour);
       
-      // Validate required fields
+      // Validate day_of_week
       if (typeof hour.day_of_week !== 'number' || hour.day_of_week < 0 || hour.day_of_week > 6) {
-        console.error(`Invalid day_of_week for hour ${i}:`, hour.day_of_week);
-        return Response.json({ 
-          error: `Invalid day_of_week for hour ${i}: ${hour.day_of_week}. Must be 0-6.` 
-        }, { status: 400 });
+        validationErrors.push(`Invalid day_of_week for hour ${i}: ${hour.day_of_week}. Must be 0-6.`);
+        continue;
       }
 
-      // Convert time strings to DateTime objects
-      let openDateTime = null;
-      let closeDateTime = null;
-
+      // Validate time formats if not closed and not 24 hours
       if (!hour.is_closed && !hour.is_24_hours) {
-        if (!hour.open_time || !hour.close_time) {
-          console.error(`Missing time data for hour ${i}:`, hour);
-          return Response.json({ 
-            error: `Missing open_time or close_time for ${hour.day_name || `day ${hour.day_of_week}`}` 
-          }, { status: 400 });
-        }
+        if (hour.open_time && hour.close_time) {
+          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+          
+          if (!timeRegex.test(hour.open_time)) {
+            validationErrors.push(`Invalid open_time format for day ${hour.day_of_week}. Use HH:mm format.`);
+            continue;
+          }
+          
+          if (!timeRegex.test(hour.close_time)) {
+            validationErrors.push(`Invalid close_time format for day ${hour.day_of_week}. Use HH:mm format.`);
+            continue;
+          }
 
-        // Validate time format (HH:mm)
-        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-        if (!timeRegex.test(hour.open_time)) {
-          console.error(`Invalid open_time format for hour ${i}:`, hour.open_time);
-          return Response.json({ 
-            error: `Invalid open_time format for ${hour.day_name || `day ${hour.day_of_week}`}: ${hour.open_time}. Use HH:mm format.` 
-          }, { status: 400 });
+          // Check if closing time is after opening time
+          const openMinutes = timeStringToMinutes(hour.open_time);
+          const closeMinutes = timeStringToMinutes(hour.close_time);
+          if (openMinutes >= closeMinutes) {
+            validationErrors.push(`Closing time must be after opening time for day ${hour.day_of_week}.`);
+            continue;
+          }
+        } else {
+          validationErrors.push(`Open time and close time are required for day ${hour.day_of_week} when not closed or 24 hours.`);
+          continue;
         }
-        if (!timeRegex.test(hour.close_time)) {
-          console.error(`Invalid close_time format for hour ${i}:`, hour.close_time);
-          return Response.json({ 
-            error: `Invalid close_time format for ${hour.day_name || `day ${hour.day_of_week}`}: ${hour.close_time}. Use HH:mm format.` 
-          }, { status: 400 });
-        }
-
-        // Convert time strings to DateTime objects
-        openDateTime = timeStringToDateTime(hour.open_time);
-        closeDateTime = timeStringToDateTime(hour.close_time);
-
-        console.log(`Converted times for day ${hour.day_of_week}:`, {
-          original: { open: hour.open_time, close: hour.close_time },
-          converted: { open: openDateTime, close: closeDateTime }
-        });
       }
 
-      // Prepare hour data
-      const hourData = {
-        business_id: id,
-        day_of_week: parseInt(hour.day_of_week),
-        open_time: openDateTime,
-        close_time: closeDateTime,
-        is_closed: Boolean(hour.is_closed),
-        is_24_hours: Boolean(hour.is_24_hours),
-        created_at: new Date()
-      };
-
-      validHours.push(hourData);
+      validatedHours.push(hour);
     }
 
-    console.log('Validated hours data:', validHours);
+    if (validationErrors.length > 0) {
+      return Response.json({ 
+        error: 'Validation failed', 
+        details: validationErrors 
+      }, { status: 400 });
+    }
 
-    let createResult = null;
-    if (validHours.length > 0) {
-      console.log('Creating new hours...');
-      createResult = await prisma.business_hours.createMany({
-        data: validHours
+    // Use transaction with raw SQL to handle TIME fields properly
+    const result = await prisma.$transaction(async (tx) => {
+      // Delete existing hours for this business
+      await tx.business_hours.deleteMany({
+        where: { business_id: id }
       });
-      console.log('Created hours result:', createResult);
-    } else {
-      console.log('No valid hours data to create');
-    }
 
-    // Fetch and return the created hours
-    console.log('Fetching saved hours...');
-    const savedHours = await prisma.business_hours.findMany({
-      where: { business_id: id },
-      orderBy: { day_of_week: 'asc' }
+      // Insert new hours using raw SQL to properly handle TIME fields
+      const insertPromises = validatedHours.map(hour => {
+        const openTime = (!hour.is_closed && !hour.is_24_hours && hour.open_time) ? hour.open_time : null;
+        const closeTime = (!hour.is_closed && !hour.is_24_hours && hour.close_time) ? hour.close_time : null;
+        
+        // Debug logging
+        console.log(`Inserting hours for day ${hour.day_of_week}:`, {
+          openTime,
+          closeTime,
+          is_closed: hour.is_closed,
+          is_24_hours: hour.is_24_hours,
+          original_open: hour.open_time,
+          original_close: hour.close_time
+        });
+        
+        return tx.$executeRaw`
+          INSERT INTO business_hours (
+            id, business_id, day_of_week, open_time, close_time, 
+            is_closed, is_24_hours, created_at
+          ) VALUES (
+            UUID(), ${id}, ${hour.day_of_week}, ${openTime}, ${closeTime},
+            ${hour.is_closed}, ${hour.is_24_hours}, NOW()
+          )
+        `;
+      });
+
+      await Promise.all(insertPromises);
+
+      // Fetch the saved hours using raw SQL to avoid timezone conversion
+      const rawHours = await tx.$queryRaw`
+        SELECT id, business_id, day_of_week, 
+               TIME_FORMAT(open_time, '%H:%i') as open_time,
+               TIME_FORMAT(close_time, '%H:%i') as close_time,
+               is_closed, is_24_hours, created_at
+        FROM business_hours 
+        WHERE business_id = ${id}
+        ORDER BY day_of_week ASC
+      `;
+
+      console.log('Raw hours from database:', rawHours);
+
+      return { savedHours: rawHours, insertedCount: validatedHours.length };
     });
 
-    console.log('Saved hours fetched:', savedHours);
-
-    // Convert BigInt IDs to strings and DateTime back to time strings
-    const serializedHours = savedHours.map(hour => ({
-      ...hour,
+    // Serialize the response - no conversion needed since we used TIME_FORMAT
+    const serializedHours = result.savedHours.map(hour => ({
       id: hour.id.toString(),
       business_id: hour.business_id.toString(),
-      open_time: dateTimeToTimeString(hour.open_time),
-      close_time: dateTimeToTimeString(hour.close_time)
+      day_of_week: hour.day_of_week,
+      open_time: hour.open_time, // Already formatted as HH:mm
+      close_time: hour.close_time, // Already formatted as HH:mm
+      is_closed: Boolean(hour.is_closed),
+      is_24_hours: Boolean(hour.is_24_hours),
+      created_at: hour.created_at
     }));
 
     return Response.json({
       success: true,
       message: 'Business hours saved successfully',
-      created: createResult?.count || 0,
+      created: result.insertedCount,
       hours: serializedHours
     });
+
   } catch (error) {
     console.error('Error saving business hours:', error);
     return Response.json({ 
-      error: error.message,
-      details: error.stack,
-      code: error.code
+      error: 'Internal server error',
+      details: error.message
     }, { status: 500 });
   }
 }
 
-// Update business hours for admin
+// Helper function to convert time string to minutes for comparison
+function timeStringToMinutes(timeString) {
+  if (!timeString) return 0;
+  const parts = timeString.split(':');
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  return hours * 60 + minutes;
+}
+
+// Update business hours (alias for POST)
 export async function PUT(request, { params }) {
-  // Use the same logic as POST for simplicity
   return POST(request, { params });
 }
 
-// Delete business hours for admin
+// Delete business hours
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
@@ -283,8 +283,8 @@ export async function DELETE(request, { params }) {
   } catch (error) {
     console.error('Error deleting business hours:', error);
     return Response.json({ 
-      error: error.message,
-      details: error.stack 
+      error: 'Internal server error',
+      details: error.message 
     }, { status: 500 });
   }
 }

@@ -1,4 +1,3 @@
-// app/api/businesses/popular/route.js
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -8,8 +7,8 @@ export async function GET() {
     const businesses = await prisma.businesses.findMany({
       take: 2,
       where: {
-        is_active: true,    // Use true instead of 1
-        is_featured: true   // Use true instead of 1
+        is_active: true,
+        is_featured: true
       },
       orderBy: {
         created_at: 'desc'
@@ -17,13 +16,14 @@ export async function GET() {
       select: {
         id: true,
         name: true,
-        slug: true, // Add slug for routing
+        slug: true,
         description: true,
         short_description: true,
         street_address: true,
         city: true,
         state: true,
         zip_code: true,
+        image_url: true, // Add this line
       }
     });
 

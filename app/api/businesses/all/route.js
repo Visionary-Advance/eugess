@@ -1,43 +1,46 @@
-// app/api/businesses/all/route.js
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    const businessesWithDetails = await prisma.$queryRaw`
-      SELECT DISTINCT
-        b.id,
-        b.name,
-        b.slug,
-        b.description,
-        b.short_description,
-        b.phone,
-        b.email,
-        b.website,
-        b.street_address,
-        b.city,
-        b.state,
-        b.zip_code,
-        b.neighborhood_id,
-        b.price_level,
-        b.cuisine_type,
-        b.is_featured,
-        b.has_takeout,
-        b.has_delivery,
-        b.has_outdoor_seating,
-        b.is_wheelchair_accessible,
-        b.has_wifi,
-        b.is_pet_friendly,
-        b.has_parking,
-        bi.url as image
-      FROM businesses b
-      LEFT JOIN business_images bi ON b.id = bi.business_id AND bi.is_primary = true
-      WHERE b.is_active = true
-      ORDER BY b.is_featured DESC, b.name ASC
-    `;
+    const businesses = await prisma.businesses.findMany({
+      where: {
+        is_active: true
+      },
+      orderBy: [
+        { is_featured: 'desc' },
+        { name: 'asc' }
+      ],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        short_description: true,
+        phone: true,
+        email: true,
+        website: true,
+        street_address: true,
+        city: true,
+        state: true,
+        zip_code: true,
+        neighborhood_id: true,
+        price_level: true,
+        cuisine_type: true,
+        is_featured: true,
+        has_takeout: true,
+        has_delivery: true,
+        has_outdoor_seating: true,
+        is_wheelchair_accessible: true,
+        has_wifi: true,
+        is_pet_friendly: true,
+        has_parking: true,
+        image_url: true, // Add this line
+      }
+    });
 
-    const serializedBusinesses = businessesWithDetails.map(business => ({
+    const serializedBusinesses = businesses.map(business => ({
       ...business,
       id: business.id.toString(),
     }));

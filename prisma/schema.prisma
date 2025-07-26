@@ -139,6 +139,7 @@ model businesses {
   is_pet_friendly          Boolean?  @default(false)
   has_parking              Boolean?  @default(false)
   cuisine_type             String?   @db.VarChar(50)
+  image_url                String?   @db.Text
 
   @@index([is_active], map: "idx_businesses_active")
   @@index([is_featured], map: "idx_businesses_featured")
