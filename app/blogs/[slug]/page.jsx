@@ -173,10 +173,7 @@ export default function BlogPage() {
 
           {/* Meta Information */}
           <div className="flex flex-wrap items-center gap-6 text-gray-600 mb-6">
-            <div className="flex items-center">
-              <User className="w-5 h-5 mr-2" />
-              <span className="font-medium">{blog.author_name}</span>
-            </div>
+            
             <div className="flex items-center">
               <Calendar className="w-5 h-5 mr-2" />
               <span>{formatDate(blog.publish_date || blog.created_at)}</span>

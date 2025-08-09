@@ -5,6 +5,7 @@ import { Star, Phone, MapPin, ChevronRight } from "lucide-react";
 
 export default function RandomRestaurantsSection() {
   const [restaurants, setRestaurants] = useState([]);
+  const [businessHours, setBusinessHours] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -12,7 +13,13 @@ export default function RandomRestaurantsSection() {
       try {
         const response = await fetch('/api/businesses/random');
         const data = await response.json();
-        setRestaurants(Array.isArray(data) ? data : []);
+        const restaurantsData = Array.isArray(data) ? data : [];
+        setRestaurants(restaurantsData);
+        
+        // Fetch business hours for each restaurant
+        if (restaurantsData.length > 0) {
+          await fetchAllBusinessHours(restaurantsData);
+        }
       } catch (error) {
         console.error('Error fetching random restaurants:', error);
         setRestaurants([]);
@@ -23,6 +30,30 @@ export default function RandomRestaurantsSection() {
 
     fetchRandomRestaurants();
   }, []);
+
+  const fetchAllBusinessHours = async (restaurants) => {
+    const hoursPromises = restaurants.map(async (restaurant) => {
+      try {
+        const response = await fetch(`/api/businesses/${restaurant.id}/hours`);
+        if (response.ok) {
+          const hours = await response.json();
+          return { businessId: restaurant.id, hours };
+        }
+      } catch (error) {
+        console.error(`Error fetching hours for business ${restaurant.id}:`, error);
+      }
+      return { businessId: restaurant.id, hours: [] };
+    });
+
+    const allHours = await Promise.all(hoursPromises);
+    const hoursMap = {};
+    
+    allHours.forEach(({ businessId, hours }) => {
+      hoursMap[businessId] = hours;
+    });
+    
+    setBusinessHours(hoursMap);
+  };
 
   // Helper function to format cuisine type
   const formatCuisineType = (cuisineType) => {
@@ -48,12 +79,63 @@ export default function RandomRestaurantsSection() {
     return parts.join(', ');
   };
 
-  // Mock function for open/closed status (you can enhance this with business hours later)
+  // Helper function to convert time string to minutes since midnight
+  const timeToMinutes = (timeString) => {
+    if (!timeString) return null;
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // Real function to check if restaurant is open based on actual business hours
   const getOpenStatus = (restaurant) => {
-    // For now, randomly assign open/closed status
-    // You can later integrate with business hours logic
-    const isOpen = Math.random() > 0.3; // 70% chance of being open
-    return isOpen;
+    const hours = businessHours[restaurant.id];
+   
+
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    // Find today's hours
+    const todayHours = hours.find(h => h.day_of_week === currentDay);
+    
+    if (!todayHours) {
+      return { isOpen: false, };
+    }
+
+    // Check if closed today
+    if (todayHours.is_closed) {
+      return { isOpen: false };
+    }
+
+    // Check if 24 hours
+    if (todayHours.is_24_hours) {
+      return { isOpen: true};
+    }
+
+    // Check regular hours
+    if (todayHours.open_time && todayHours.close_time) {
+      const openTime = timeToMinutes(todayHours.open_time);
+      const closeTime = timeToMinutes(todayHours.close_time);
+      
+      if (openTime !== null && closeTime !== null) {
+        if (currentTimeMinutes >= openTime && currentTimeMinutes < closeTime) {
+          return { isOpen: true, message: 'Open' };
+        } else if (currentTimeMinutes < openTime) {
+          const openHour = Math.floor(openTime / 60);
+          const openMinute = openTime % 60;
+          const ampm = openHour >= 12 ? 'PM' : 'AM';
+          const displayHour = openHour === 0 ? 12 : openHour > 12 ? openHour - 12 : openHour;
+          return { 
+            isOpen: false, 
+            message: `Opens at ${displayHour}:${openMinute.toString().padStart(2, '0')} ${ampm}` 
+          };
+        } else {
+          return { isOpen: false, message: 'Closed' };
+        }
+      }
+    }
+
+    return { isOpen: false, message: 'Closed' };
   };
 
   // Image component with fallback
@@ -160,7 +242,7 @@ export default function RandomRestaurantsSection() {
         {/* Restaurant Cards */}
         <div className="gap-y-6">
           {restaurants.map((restaurant) => {
-            const isOpen = getOpenStatus(restaurant);
+            const openStatus = getOpenStatus(restaurant);
             const cuisine = formatCuisineType(restaurant.cuisine_type);
             const priceLevel = formatPriceLevel(restaurant.price_level);
             const address = formatAddress(restaurant);
@@ -178,20 +260,30 @@ export default function RandomRestaurantsSection() {
                     <div className="flex-1 px-3 pt-3 relative">
                       {/* Restaurant Name & Status */}
                       <div className="flex items-start mb-2">
-                        <h3 className="font-serif text-[20px] lg:text-[30px] font-semibold text-black">
+                        <h3 className="font-serif text-[20px] lg:text-[30px] font-semibold text-black line-clamp-2  ">
                           {restaurant.name}
                         </h3>
-                        <span className="mx-2 text-black text-[20px] lg:text-[30px]">•</span>
+                        <span className="mx-2 hidden lg:block text-black text-[20px] lg:text-[30px]  ">•</span>
                         <div
-                          className={`px-3 py-1 mt-1 rounded-[20px] text-[13px] lg:text-[18px] font-serif ${
-                            isOpen
+                          className={`px-3 py-1 mt-1 rounded-[20px] text-[13px] lg:text-[18px] font-serif  ${
+                            openStatus.isOpen
                               ? "bg-[#276B00] text-[#0CAE00]"
                               : "bg-[#770C0C] text-[#EA0000]"
                           }`}
+                          title={openStatus.message}
                         >
-                          {isOpen ? "Open" : "Closed"}
+                          {openStatus.isOpen ? "Open" : "Closed"}
                         </div>
                       </div>
+
+                      {/* Status message for more detail */}
+                      {openStatus.message !== 'Open' && openStatus.message !== 'Closed' && (
+                        <div className="mb-2">
+                          <span className="text-[12px] lg:text-[14px] text-gray-600 font-serif">
+                            {openStatus.message}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Cuisine, Rating, Price */}
                       <div className="flex items-center gap-2 lg:mb-6">

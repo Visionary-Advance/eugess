@@ -1,11 +1,13 @@
-// Update your app/api/neighborhoods/route.js file with this content:
-
+// app/api/neighborhoods/route.js
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 export async function GET() {
   try {
+    console.log('Fetching neighborhoods...');
+    
+    // First, let's try without image_url to see if that's the issue
     const neighborhoods = await prisma.neighborhoods.findMany({
       where: {
         is_active: true,
@@ -16,26 +18,27 @@ export async function GET() {
       select: {
         id: true,
         name: true,
-        slug: true,        // Add this line - this was missing!
+        slug: true,
         description: true,
-        // Note: Your neighborhoods table doesn't have an image field
-        // You might need to add one or use a default image
+        // image_url: true, // Comment this out temporarily
       }
     });
 
-    // Convert BigInt fields to strings and add placeholder images
+    console.log('Raw neighborhoods from DB:', neighborhoods);
+
+    // Convert BigInt fields to strings
     const serializedNeighborhoods = neighborhoods.map(neighborhood => ({
       ...neighborhood,
       id: neighborhood.id.toString(),
-      // Add a placeholder image since your schema doesn't have an image field
-      image: `https://via.placeholder.com/325x375/355E3B/white?text=${encodeURIComponent(neighborhood.name)}`
     }));
 
-    console.log('Neighborhoods API returning:', serializedNeighborhoods); // Debug log
+    console.log('Serialized neighborhoods:', serializedNeighborhoods);
 
     return Response.json(serializedNeighborhoods);
   } catch (error) {
     console.error('Error fetching neighborhoods:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     return Response.json({ error: error.message }, { status: 500 });
   }
 }

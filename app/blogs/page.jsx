@@ -259,10 +259,7 @@ export default function BlogsPage() {
                         </p>
                       )}
                       <div className="flex items-center gap-4 text-gray-500 text-sm mt-auto">
-                        <div className="flex items-center">
-                          <User className="w-4 h-4 mr-1" />
-                          <span>{blog.author_name}</span>
-                        </div>
+                        
                         <div className="flex items-center">
                           <Clock className="w-4 h-4 mr-1" />
                           <span>{blog.read_time_minutes} min</span>
@@ -319,10 +316,7 @@ export default function BlogsPage() {
                         </p>
                       )}
                       <div className="flex items-center gap-3 text-gray-500 text-xs mt-auto">
-                        <div className="flex items-center">
-                          <User className="w-3 h-3 mr-1" />
-                          <span>{blog.author_name}</span>
-                        </div>
+                       
                         <div className="flex items-center">
                           <Clock className="w-3 h-3 mr-1" />
                           <span>{blog.read_time_minutes} min</span>
