@@ -1,11 +1,13 @@
-// app/neighborhoods/page.jsx - Final working version with slugs
-
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MapPin, ChevronRight, Search, X } from 'lucide-react';
 
 export default function NeighborhoodsPage() {
+  const searchParams = useSearchParams();
+  const selectedSlug = searchParams.get('selected'); // Get the selected neighborhood from URL
+  
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,9 +33,24 @@ export default function NeighborhoodsPage() {
         const neighborhoodsData = Array.isArray(data) ? data : [];
         setNeighborhoods(neighborhoodsData);
         
-        // Auto-select first neighborhood if available
-        if (neighborhoodsData.length > 0) {
-          console.log('Auto-selecting first neighborhood:', neighborhoodsData[0]);
+        // Auto-select neighborhood based on URL parameter or first neighborhood
+        if (selectedSlug && neighborhoodsData.length > 0) {
+          console.log('Looking for neighborhood with slug:', selectedSlug);
+          const targetNeighborhood = neighborhoodsData.find(n => n.slug === selectedSlug);
+          if (targetNeighborhood) {
+            console.log('Found and selecting neighborhood:', targetNeighborhood);
+            setSelectedNeighborhood(targetNeighborhood);
+            
+            // Scroll to the neighborhoods section after a brief delay
+            setTimeout(() => {
+              scrollToNeighborhoodDetails();
+            }, 500);
+          } else {
+            console.log('Neighborhood not found, selecting first available');
+            setSelectedNeighborhood(neighborhoodsData[0]);
+          }
+        } else if (neighborhoodsData.length > 0) {
+          console.log('No selected slug, auto-selecting first neighborhood');
           setSelectedNeighborhood(neighborhoodsData[0]);
         }
       } catch (error) {
@@ -45,7 +62,18 @@ export default function NeighborhoodsPage() {
     }
 
     fetchNeighborhoods();
-  }, []);
+  }, [selectedSlug]);
+
+  // Function to scroll to neighborhood details
+  const scrollToNeighborhoodDetails = () => {
+    const detailsElement = document.getElementById('neighborhood-details');
+    if (detailsElement) {
+      detailsElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  };
 
   // Fetch businesses when neighborhood changes
   useEffect(() => {
@@ -88,6 +116,17 @@ export default function NeighborhoodsPage() {
     console.log('Selected neighborhood:', neighborhood);
     setSelectedNeighborhood(neighborhood);
     setSearchTerm('');
+    
+    // Update URL without page reload
+    const newUrl = `/neighborhoods?selected=${neighborhood.slug}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+    
+    // Scroll to details on mobile/smaller screens
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        scrollToNeighborhoodDetails();
+      }, 100);
+    }
   };
 
   const handleBusinessClick = (business) => {
@@ -162,6 +201,8 @@ export default function NeighborhoodsPage() {
               </button>
             )}
           </div>
+
+          
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -205,8 +246,6 @@ export default function NeighborhoodsPage() {
                               <MapPin className="w-4 h-4 mr-1" />
                               <span>Eugene, Oregon</span>
                             </div>
-                            {/* Show the slug */}
-                           
                           </div>
                           <ChevronRight className={`w-5 h-5 ml-4 transition-colors ${
                             selectedNeighborhood?.slug === neighborhood.slug
@@ -234,7 +273,7 @@ export default function NeighborhoodsPage() {
           </div>
 
           {/* Selected Neighborhood Details */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" id="neighborhood-details">
             {selectedNeighborhood ? (
               <div className="space-y-6">
                 {/* Neighborhood Header */}
@@ -242,7 +281,7 @@ export default function NeighborhoodsPage() {
                   {/* Neighborhood Image */}
                   <div className="h-64 bg-gray-200 overflow-hidden">
                     <img
-                      src={selectedNeighborhood.image || `https://via.placeholder.com/800x300/355E3B/white?text=${encodeURIComponent(selectedNeighborhood.name)}`}
+                      src={selectedNeighborhood.image_url || `https://via.placeholder.com/800x300/355E3B/white?text=${encodeURIComponent(selectedNeighborhood.name)}`}
                       alt={selectedNeighborhood.name}
                       className="w-full h-full object-cover"
                     />
@@ -258,8 +297,6 @@ export default function NeighborhoodsPage() {
                       </p>
                     )}
                     
-                    
-                   
                     {/* Neighborhood Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div className="bg-gray-50 p-4 rounded-lg text-center">
@@ -328,7 +365,7 @@ export default function NeighborhoodsPage() {
                                 </p>
                               )}
                               
-                              {/* Business Tags - Only show for selected neighborhood */}
+                              {/* Business Tags */}
                               <div className="flex flex-wrap gap-2">
                                 {business.cuisine_type && (
                                   <span className="px-3 py-1 bg-[#355E3B] text-white text-sm rounded-full">

@@ -34,50 +34,25 @@ export default function NeighborhoodSection() {
     fetchNeighborhoods();
   }, []);
 
-  // Image mapping for neighborhoods - you can update these URLs
+  // Simplified image function - only use database images or gradient fallback
   const getNeighborhoodImage = (neighborhood) => {
     console.log('Getting image for neighborhood:', neighborhood);
+    console.log('Full neighborhood object:', JSON.stringify(neighborhood, null, 2));
     
-    const imageMap = {
-      'downtown': 'https://picsum.photos/800/600?random=1',
-      'whiteaker': 'https://picsum.photos/800/600?random=2',
-      'university': 'https://picsum.photos/800/600?random=3',
-      'south-hills': 'https://picsum.photos/800/600?random=4',
-      'santa-clara': 'https://picsum.photos/800/600?random=5',
-      'river-road': 'https://picsum.photos/800/600?random=6',
-      'west-eugene': 'https://picsum.photos/800/600?random=7',
-      'bethel': 'https://picsum.photos/800/600?random=8',
-    };
-
-    // Try to use the image from the API first (your API returns 'image' field)
+    // Check for image_url from database first
     if (neighborhood.image_url && neighborhood.image_url.trim() !== '') {
       console.log('Using database image_url:', neighborhood.image_url);
       return neighborhood.image_url;
     }
     
-    // Also check for 'image' field from your current API
+    // Check for image field from database
     if (neighborhood.image && neighborhood.image.trim() !== '') {
-      console.log('Using API image field:', neighborhood.image);
+      console.log('Using database image field:', neighborhood.image);
       return neighborhood.image;
     }
 
-    // Fall back to mapped images based on slug
-    if (neighborhood.slug && imageMap[neighborhood.slug.toLowerCase()]) {
-      console.log('Using mapped image for slug:', neighborhood.slug);
-      return imageMap[neighborhood.slug.toLowerCase()];
-    }
-    
-    // Try matching by name if slug doesn't work
-    if (neighborhood.name) {
-      const nameSlug = neighborhood.name.toLowerCase().replace(/\s+/g, '-');
-      if (imageMap[nameSlug]) {
-        console.log('Using mapped image for name-slug:', nameSlug);
-        return imageMap[nameSlug];
-      }
-    }
-
-    // Final fallback - generate a nice gradient placeholder
-    console.log('Using gradient placeholder for:', neighborhood.name);
+    // If no database image, return gradient placeholder class
+    console.log('No database image found, using gradient placeholder for:', neighborhood.name);
     return generatePlaceholderImage(neighborhood.name);
   };
 
@@ -90,11 +65,14 @@ export default function NeighborhoodSection() {
       'from-green-400 to-green-600',
       'from-teal-400 to-teal-600',
       'from-indigo-400 to-indigo-600',
-      'from-slate-400 to-slate-600'
+      'from-slate-400 to-slate-600',
+      'from-amber-400 to-amber-600',
+      'from-rose-400 to-rose-600',
+      'from-cyan-400 to-cyan-600'
     ];
     
     // Use the name to consistently pick a color
-    const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    const colorIndex = name ? name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length : 0;
     return colors[colorIndex];
   };
 
@@ -111,11 +89,12 @@ export default function NeighborhoodSection() {
   };
 
   const handleNeighborhoodClick = (neighborhood) => {
-    // Navigate to the neighborhood page
-    window.location.href = `/neighborhoods/${neighborhood.slug}`;
+    console.log('Navigating to neighborhood:', neighborhood.slug);
+    // Navigate to neighborhoods page with the selected neighborhood slug
+    window.location.href = `/neighborhoods?selected=${neighborhood.slug}`;
   };
 
-  // Image component with error handling
+  // Enhanced Image component with better error handling
   const NeighborhoodImage = ({ neighborhood }) => {
     const [imageError, setImageError] = useState(false);
     const [imageLoading, setImageLoading] = useState(true);
@@ -132,22 +111,13 @@ export default function NeighborhoodSection() {
       setImageLoading(false);
     };
 
-    // If it's a gradient class (placeholder), render a div with gradient
-    if (typeof imageUrl === 'string' && imageUrl.includes('from-')) {
-      return (
-        <div className={`w-full h-full bg-gradient-to-br ${imageUrl} flex items-center justify-center`}>
-          <div className="text-center text-white p-6">
-            <div className="text-4xl mb-3">🏘️</div>
-            <h3 className="text-xl font-serif font-bold">{neighborhood.name}</h3>
-            <p className="text-sm opacity-90 mt-2">Eugene Neighborhood</p>
-          </div>
-        </div>
-      );
-    }
-
-    // If image failed or no URL, show gradient fallback
-    if (imageError || !imageUrl || imageUrl.trim() === '') {
-      const gradientClass = generatePlaceholderImage(neighborhood.name || 'Neighborhood');
+    // Check if imageUrl is a gradient class (starts with 'from-')
+    const isGradientPlaceholder = typeof imageUrl === 'string' && imageUrl.includes('from-');
+    
+    // If it's a gradient class OR if image failed to load, show gradient placeholder
+    if (isGradientPlaceholder || imageError) {
+      const gradientClass = isGradientPlaceholder ? imageUrl : generatePlaceholderImage(neighborhood.name || 'Neighborhood');
+      
       return (
         <div className={`w-full h-full bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
           <div className="text-center text-white p-6">
@@ -159,24 +129,38 @@ export default function NeighborhoodSection() {
       );
     }
 
-    // Render actual image with loading state
+    // If we have a real URL but no error, render the image
+    if (imageUrl && !isGradientPlaceholder) {
+      return (
+        <div className="w-full h-full relative">
+          {imageLoading && (
+            <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+              <div className="text-gray-400">Loading...</div>
+            </div>
+          )}
+          <img
+            src={imageUrl}
+            alt={`${neighborhood.name || 'Neighborhood'} neighborhood in Eugene, Oregon`}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${
+              imageLoading ? 'opacity-0' : 'opacity-100'
+            }`}
+            onError={handleImageError}
+            onLoad={handleImageLoad}
+            loading="lazy"
+          />
+        </div>
+      );
+    }
+
+    // Fallback gradient if no URL at all
+    const fallbackGradient = generatePlaceholderImage(neighborhood.name || 'Neighborhood');
     return (
-      <div className="w-full h-full relative">
-        {imageLoading && (
-          <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
-            <div className="text-gray-400">Loading...</div>
-          </div>
-        )}
-        <img
-          src={imageUrl}
-          alt={`${neighborhood.name || 'Neighborhood'} neighborhood`}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
-            imageLoading ? 'opacity-0' : 'opacity-100'
-          }`}
-          onError={handleImageError}
-          onLoad={handleImageLoad}
-          loading="lazy"
-        />
+      <div className={`w-full h-full bg-gradient-to-br ${fallbackGradient} flex items-center justify-center`}>
+        <div className="text-center text-white p-6">
+          <div className="text-4xl mb-3">🏘️</div>
+          <h3 className="text-xl font-serif font-bold">{neighborhood.name || 'Neighborhood'}</h3>
+          <p className="text-sm opacity-90 mt-2">Eugene Neighborhood</p>
+        </div>
       </div>
     );
   };
@@ -269,7 +253,7 @@ export default function NeighborhoodSection() {
           )}
 
           {/* Neighborhood Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 px-12 md:px-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 px-4 md:px-8 lg:px-12 xl:px-16">
             {(neighborhoods.length <= 4 
               ? neighborhoods 
               : neighborhoods
@@ -303,15 +287,34 @@ export default function NeighborhoodSection() {
           </div>
 
           {/* Pagination dots for mobile */}
-          {neighborhoods.length > 4 && (
-            <div className="flex justify-center mt-8 lg:hidden">
+          {neighborhoods.length > 1 && (
+            <div className="flex justify-center mt-8 md:hidden">
               <div className="flex space-x-2">
-                {Array.from({ length: Math.ceil(neighborhoods.length / 4) }).map((_, index) => (
+                {Array.from({ length: Math.ceil(neighborhoods.length / 1) }).map((_, index) => (
                   <button
                     key={index}
-                    onClick={() => setCurrentNeighborhoodIndex(index * 4)}
+                    onClick={() => setCurrentNeighborhoodIndex(index * 1)}
                     className={`w-3 h-3 rounded-full transition-colors ${
-                      Math.floor(currentNeighborhoodIndex / 4) === index
+                      Math.floor(currentNeighborhoodIndex / 1) === index
+                        ? 'bg-[#355E3B]'
+                        : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Pagination dots for tablet */}
+          {neighborhoods.length > 2 && (
+            <div className="hidden md:flex lg:hidden justify-center mt-8">
+              <div className="flex space-x-2">
+                {Array.from({ length: Math.ceil(neighborhoods.length / 2) }).map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentNeighborhoodIndex(index * 2)}
+                    className={`w-3 h-3 rounded-full transition-colors ${
+                      Math.floor(currentNeighborhoodIndex / 2) === index
                         ? 'bg-[#355E3B]'
                         : 'bg-gray-300'
                     }`}
